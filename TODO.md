@@ -13,6 +13,7 @@ Suddivisione dei task
 - Face detection usando Cascade e Yolo, con annesse misure di performance. INPUT: l’immagine; OUTPUT: immagine croppata del volto.
   N.B.: le img croppate da wikipedia non sono ben croppate, però hanno un 40% di margine -> possiamo toglierlo. Altrimenti prendiamo il dataset di IMDB
 - Task di regressione età tramite CNN (problema: from scratch o finetuned?). INPUT: immagine croppata del volto; OUTPUT: un range di età. (multitasking?) 
+  Prima provare con LBP, poi con rete from scratch, poi magari con rete pretrained
 - Task di classificazione genere tramite CNN (problema: from scratch o finetuned?). INPUT: immagine croppata del volto; OUTPUT: predizione binaria. (multitasking?)
 - Similarity con il di celebrities (può anche essere un db ridotto). INPUT: immagine croppata del volto; OUTPUT: top n immagini più simili. (feature di basso livello della cnn?)
 - Merge dei vari moduli (LINK AL BOT: https://github.com/dros1986/python_bot).
