@@ -1,10 +1,9 @@
-import cv2
 import numpy as np
 import pickle
 from abc import ABC, abstractmethod
 
 
-IMAGE_INPUT_SIZE = (224, 224)
+IMAGE_INPUT_SIZE = (224, 224, 3)
 
 
 class Model(ABC):
