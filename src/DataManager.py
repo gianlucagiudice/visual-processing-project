@@ -74,7 +74,7 @@ class DataManager:
                 # Resize image
                 im = cv2.resize(im, (self.resize_shape[0], self.resize_shape[1]))
                 # Append image
-                images[i] = im
+                images[i] = im / 255
                 # Update progress bar
                 pbar.update(1)
 
