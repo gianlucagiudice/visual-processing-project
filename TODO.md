@@ -27,8 +27,6 @@ Suddivisione dei task:
 6. Merge dei vari moduli (LINK AL BOT: https://github.com/dros1986/python_bot).
 7. Scraping retrieval
 
-## Note di implementazione
-- Look up table per le features su similarity.
 
 ## Classfiicazione
 1. Rete from scratch
