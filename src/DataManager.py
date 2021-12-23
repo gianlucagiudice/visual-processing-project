@@ -1,5 +1,7 @@
 import numpy as np
 
+import matplotlib.pyplot as plt
+
 import cv2
 from tqdm import tqdm
 
@@ -35,6 +37,7 @@ def sample_n(dataset, n_subset):
 class DataManager:
     X = ['path']
     y = ['gender', 'age']
+    PADDING = .40
 
     def __init__(self, dataset_path, metadata_filename, resize_shape,
                  n_subset=None, shuffle=True, test_size=0.3, validation_size=.15):
@@ -71,6 +74,8 @@ class DataManager:
                 im = cv2.imread(image)
                 # Change color space
                 im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+                # Remove padding
+                im = self.crop_image(im)
                 # Resize image
                 im = cv2.resize(im, (self.resize_shape[0], self.resize_shape[1]))
                 # Append image
@@ -79,6 +84,9 @@ class DataManager:
                 pbar.update(1)
 
         return images
+
+    def crop_image(self, im, padding=PADDING):
+        return im
 
     def get_X(self, df, return_images=True):
         files = df[DataManager.X].values.flatten()
@@ -90,3 +98,10 @@ class DataManager:
     @staticmethod
     def get_y(df):
         return df[DataManager.y]
+
+    def filter_invalid_image(self):
+        # TODO: Filter the images with padding
+        '''
+        Se un'immagine ha il "contorno" replicato bisogna toglierla perchè non è un'immagine valida.
+        '''
+        pass
