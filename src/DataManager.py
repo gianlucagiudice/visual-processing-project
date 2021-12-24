@@ -86,7 +86,14 @@ class DataManager:
         return images
 
     def crop_image(self, im, padding=PADDING):
-        return im
+        height, width, _ = im.shape
+        ratio = 1 / (1 + padding)
+
+        top_y = height-math.floor(height*ratio)
+        bottom_y = math.floor(height*ratio)
+        right_x = math.floor(width*ratio)
+        left_x = width - math.floor(width*ratio)
+        return im[top_y:bottom_y, left_x:right_x, :]
 
     def get_X(self, df, return_images=True):
         files = df[DataManager.X].values.flatten()
