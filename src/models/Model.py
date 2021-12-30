@@ -1,5 +1,4 @@
 import numpy as np
-import pickle
 from abc import ABC, abstractmethod
 
 
@@ -7,16 +6,16 @@ IMAGE_INPUT_SIZE = (224, 224, 3)
 
 
 class Model(ABC):
-    def __init__(self, input_size=IMAGE_INPUT_SIZE, train: bool=False):
-        self.weights = None
-        pass
+    def __init__(self, input_size: np.array=IMAGE_INPUT_SIZE):
+        # Model weights
+        self.model = None
 
     @abstractmethod
     def predict(self, image: np.array) -> (bool, int):
         pass
 
     @abstractmethod
-    def train(self) -> None:
+    def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
         pass
 
     @abstractmethod
