@@ -1,9 +1,13 @@
-from parameters import IMBD_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
+from config import IMBD_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
 
 from src.DataManager import DataManager
 from src.models.Model import IMAGE_INPUT_SIZE
 
+import matplotlib.pyplot as plt
+
+
 N_SAMPLE = 25e3
+N_SAMPLE = 10
 
 # Read the data
 data_manager = DataManager(IMDB_CROPPED_PATH, IMBD_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE, n_subset=N_SAMPLE)
@@ -21,4 +25,14 @@ print('Read test images ...')
 X_test, y_test = data_manager.get_X(test), data_manager.get_y(test)
 
 # Train the model
+
+plt.imshow(X_train[0])
+plt.show()
+
+plt.imshow(X_test[0])
+plt.show()
+
+
+plt.imshow(X_val[0])
+plt.show()
 pass

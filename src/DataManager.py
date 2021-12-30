@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import cv2
 from tqdm import tqdm
 
-from src.parameters import SEED
+from src.config import SEED
 from sklearn.model_selection import train_test_split
 
 from os.path import join
