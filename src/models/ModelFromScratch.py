@@ -1,5 +1,178 @@
-from src.models import Model
+from datetime import datetime
+
+import keras.engine.functional
+import numpy as np
+
+from src.models.Model import Model as MyModel
+from src.models.Model import IMAGE_INPUT_SIZE
+
+import tensorflow as tf
+from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR
+from keras.optimizer_v2.adam import Adam
+
+from os.path import join
+import os
+import re
+# from keras.layers import (Flatten, Dropout, ZeroPadding2D, BatchNormalization,
+#                           Activation, GlobalAveragePooling2D, MaxPool2D, Add)
+
+from keras.layers import Dense
+from keras.models import Model
+
+import subprocess
 
 
-class ModelFromScratch(Model):
-    pass
+import pickle
+
+import visualkeras
+
+import sys
+
+
+lr = 0.0001
+epochs = 50
+batch_size = 64
+patience = 5
+
+# tensorboard --logdir log/fit/from_scratch
+
+
+class ModelFromScratch(MyModel):
+    checkpoint_dir = join(CHECKPOINT_DIR, 'from_scratch')
+    checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
+    log_dir = join(LOG_DIR, 'fit', 'from_scratch/') + datetime.now().strftime("%Y%m%d-%H%M%S")
+
+    def __init__(self, input_size=IMAGE_INPUT_SIZE):
+        super().__init__(input_size)
+        # Backbone: Resnet50
+        self.model = self.init_model(input_size)
+        # Reset weights
+        self.model = self.reset_weights(self.model)
+        # Add output layers
+        self.model = self.add_output_layers(self.model)
+        # Save network architecture
+        self.save_plot_network()
+        # Save summary
+        self.save_summary_output()
+
+    def init_model(self, input_size):
+        return tf.keras.applications.ResNet50(include_top=False, input_shape=input_size, pooling='avg')
+
+    def predict(self, image: np.array) -> (bool, int):
+        pass
+
+    def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
+        # Create checkpoint directory
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+
+        # Define callbacks
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+            mode='min',
+            monitor='val_loss',
+            patience=patience
+        )
+
+        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+            filepath=self.checkpoint_filepath,
+            save_weights_only=True,
+            save_best_only=True,
+            monitor='val_loss',
+            mode='min'
+        )
+
+        tensorboard_callback = tf.keras.callbacks.TensorBoard(
+            log_dir=self.log_dir, histogram_freq=1, update_freq='batch')
+
+        # Fit model
+        print('>>> Start training')
+        history = self.model.fit(x=x_train,
+                                 y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
+                                 validation_data=(x_val, [y_val['gender'], y_val['age']]),
+                                 use_multiprocessing=True,
+                                 workers=os.cpu_count(),
+                                 callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback])
+
+        # Dump history dictinary
+        with open(join(self.checkpoint_dir, 'from_scratch_training_history.pickle'), 'wb') as handle:
+            pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        # Load best weights
+        self.load_best_weights()
+
+        # Evaluate model
+        self.evaluate(x_test, y_test)
+
+    def load_best_weights(self):
+        ckpt_list = [(x, re.findall('-(\d+)', x)[0]) for x in os.listdir(self.checkpoint_dir) if re.match('ckpt-', x)]
+        best_model = sorted(ckpt_list, key=lambda x: x[1], reverse=True)[0][0]
+        self.model.load_weights(join(self.checkpoint_dir, best_model))
+
+    def evaluate(self, x_test, y_test):
+        results = self.model.evaluate(x=x_test,
+                                      y={'gender_output': y_test['gender'], 'age_output': y_test['age']})
+        # Dump evaluation result
+        with open(join(self.checkpoint_dir, 'from_scratch_evaluation.pickle'), 'wb') as handle:
+            pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def save_plot_network(self):
+        file_path = join(OUTPUT_IMAGE_FOLDER, 'model_from_scratch_plot.png')
+        visualkeras.layered_view(self.model, legend=True, to_file=file_path,
+                                 scale_xy=2, scale_z=2, max_z=6, spacing=5)
+
+    def save_summary_output(self):
+        file_path = join(OUTPUT_REPORT_FOLDER, 'model_from_scratch_summary.txt')
+        with open(file_path, 'w') as f:
+            orig_stdout = sys.stdout
+            sys.stdout = f
+            print(self.model.summary())
+            sys.stdout = orig_stdout
+
+    def save_weights(self) -> None:
+        pass
+
+    def load_weights(self):
+        pass
+
+    @staticmethod
+    def reset_weights(model):
+        for i, layer in enumerate(model.layers):
+            if hasattr(model.layers[i], 'kernel_initializer') and hasattr(model.layers[i], 'bias_initializer'):
+                weight_initializer = model.layers[i].kernel_initializer
+                bias_initializer = model.layers[i].bias_initializer
+
+                old_weights, old_biases = model.layers[i].get_weights()
+
+                model.layers[i].set_weights([
+                    weight_initializer(shape=old_weights.shape),
+                    bias_initializer(shape=old_biases.shape)
+                ])
+        return model
+
+    @staticmethod
+    def add_output_layers(starting_model: keras.engine.functional.Functional):
+        # Since in the ResNet50 constructor I specified the "include_top = False", the last 2 layers of the network
+        # are removed. By including "pooling = avg" the network is constructed inserting a GlobalAveragePooling2D
+        # layer as the last layer of the network. In order to accomplish the multitask learning I need to add
+        # 2 new layers
+
+        # Output layers
+        gender_layer = Dense(1, activation='sigmoid', name='gender_output')(starting_model.output)
+        age_layer = Dense(1, activation='linear', name='age_output')(starting_model.output)
+        # Final model
+        final_model = Model(inputs=starting_model.input, outputs=[gender_layer, age_layer],
+                            name='from_scratch_age_gender_clf')
+        # Compile the model
+        losses = {
+            "gender_output": "binary_crossentropy",
+            "age_output": "mean_squared_error",
+        }
+        lossWeights = {
+            "gender_output": 2.0,
+            "age_output": 1.0
+        }
+        metrics = {
+            "gender_output": 'accuracy',
+            "age_output": 'mean_absolute_error'
+        }
+        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=Adam(lr))
+        return final_model
