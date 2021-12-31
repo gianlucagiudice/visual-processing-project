@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import cv2
 from tqdm import tqdm
 
+from sklearn.preprocessing import MinMaxScaler
+
 from src.config import SEED
 from sklearn.model_selection import train_test_split
 
@@ -40,6 +42,7 @@ class DataManager:
     PADDING = .40
 
     def __init__(self, dataset_path, metadata_filename, resize_shape,
+                 normalize_images=False, normalize_age=True,
                  n_subset=None, shuffle=True, test_size=0.3, validation_size=.15):
         self.dataset_path = dataset_path
         self.metadata_filename = metadata_filename
@@ -49,12 +52,18 @@ class DataManager:
         self.resize_shape = resize_shape
         # Dataset
         self.dataset = read_dataset_metadata(dataset_path, metadata_filename)
+        # Normalize age
+        if normalize_age:
+            self.scaler = MinMaxScaler()
+            self.dataset = self.standardize_age(self.dataset, self.scaler)
         # Shuffle dataset
         if shuffle:
             self.dataset = shuffle_dataset(self.dataset)
         # Subset dataset
         if n_subset:
             self.dataset = sample_n(self.dataset, n_subset)
+        # Normalize images
+        self.normalize_images = normalize_images
 
     def get_dataset(self):
         return self.dataset
@@ -78,8 +87,11 @@ class DataManager:
                 im = self.crop_image(im)
                 # Resize image
                 im = cv2.resize(im, (self.resize_shape[0], self.resize_shape[1]))
+                # Normalize image
+                if self.normalize_images:
+                    im = im / 255
                 # Append image
-                images[i] = im / 255
+                images[i] = im
                 # Update progress bar
                 pbar.update(1)
 
@@ -112,3 +124,13 @@ class DataManager:
         Se un'immagine ha il "contorno" replicato bisogna toglierla perchè non è un'immagine valida.
         '''
         pass
+
+    def standardize_age(self, dataset, scaler):
+        x = np.expand_dims(dataset['age'], -1)
+        scaler.fit(x)
+        new_x = scaler.transform(x)
+        dataset['age'] = new_x
+        return dataset
+
+    def inverse_standardize_age(self, ages):
+        return self.scaler.inverse_transform(ages)
