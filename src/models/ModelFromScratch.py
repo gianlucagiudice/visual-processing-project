@@ -8,7 +8,11 @@ from src.models.Model import IMAGE_INPUT_SIZE
 
 import tensorflow as tf
 from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR
-from keras.optimizer_v2.adam import Adam
+
+import keras
+
+from keras.layers import BatchNormalization, Activation, Conv2D, GlobalAveragePooling2D, Dropout, MaxPool2D
+
 
 from os.path import join
 import os
@@ -28,11 +32,12 @@ import visualkeras
 
 import sys
 
-
-lr = 0.0001
-epochs = 50
-batch_size = 64
-patience = 5
+LR = 0.001
+EPOCHS = 50
+BATCH_SIZE = 64
+PATIENCE = 5
+CLIPNORM = 1
+DROPOUT = 0.3
 
 # tensorboard --logdir log/fit/from_scratch
 
@@ -47,7 +52,7 @@ class ModelFromScratch(MyModel):
         # Backbone: Resnet50
         self.model = self.init_model(input_size)
         # Reset weights
-        self.model = self.reset_weights(self.model)
+        #self.model = self.reset_weights(self.model)
         # Add output layers
         self.model = self.add_output_layers(self.model)
         # Save network architecture
@@ -56,7 +61,26 @@ class ModelFromScratch(MyModel):
         self.save_summary_output()
 
     def init_model(self, input_size):
-        return tf.keras.applications.ResNet50(include_top=False, input_shape=input_size, pooling='avg')
+        # Neural Net
+        input = keras.layers.Input(shape=input_size)
+
+        # Hidden convolutional layers
+        h_conv1 = Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(input)))
+        h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv1))))
+        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv2))))
+        h_conv4 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
+        h_conv5 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
+
+        # Flatten layers after convolutions
+        h_conv3_flat = GlobalAveragePooling2D(h_conv5)
+
+        # Dense layers
+        s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv3_flat))))
+        s_fc2 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(s_fc1))))
+
+        return Model(inputs=input, outputs=s_fc2)
+
+        #return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size, pooling='avg', weights=None)
 
     def predict(self, image: np.array) -> (bool, int):
         pass
@@ -69,7 +93,7 @@ class ModelFromScratch(MyModel):
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(
             mode='min',
             monitor='val_loss',
-            patience=patience
+            patience=PATIENCE
         )
 
         model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
@@ -90,14 +114,15 @@ class ModelFromScratch(MyModel):
                                  validation_data=(x_val, [y_val['gender'], y_val['age']]),
                                  use_multiprocessing=True,
                                  workers=os.cpu_count(),
-                                 callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback])
+                                 callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback],
+                                 epochs=EPOCHS)
 
         # Dump history dictinary
         with open(join(self.checkpoint_dir, 'from_scratch_training_history.pickle'), 'wb') as handle:
             pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Load best weights
-        self.load_best_weights()
+        #self.load_best_weights()
 
         # Evaluate model
         self.evaluate(x_test, y_test)
@@ -133,6 +158,7 @@ class ModelFromScratch(MyModel):
     def load_weights(self):
         pass
 
+    '''
     @staticmethod
     def reset_weights(model):
         for i, layer in enumerate(model.layers):
@@ -147,6 +173,7 @@ class ModelFromScratch(MyModel):
                     bias_initializer(shape=old_biases.shape)
                 ])
         return model
+    '''
 
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
@@ -174,5 +201,6 @@ class ModelFromScratch(MyModel):
             "gender_output": 'accuracy',
             "age_output": 'mean_absolute_error'
         }
-        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=Adam(lr))
+        optimizer = tf.keras.optimizers.Adam(LR)
+        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=optimizer)
         return final_model
