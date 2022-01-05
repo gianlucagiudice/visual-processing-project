@@ -65,17 +65,18 @@ class ModelFromScratch(MyModel):
         input = keras.layers.Input(shape=input_size)
 
         # Hidden convolutional layers
-        h_conv1 = Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(input)))
-        h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv1))))
-        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv2))))
+        h_conv1 = Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input)))
+        h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(h_conv1))))
+        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv2))))
         h_conv4 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
         h_conv5 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
+        h_conv6 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(1000, 1, padding='same')(h_conv5))))
 
         # Flatten layers after convolutions
-        h_conv3_flat = GlobalAveragePooling2D(h_conv5)
+        h_conv6_flat = GlobalAveragePooling2D(h_conv6)
 
         # Dense layers
-        s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv3_flat))))
+        s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv6_flat))))
         s_fc2 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(s_fc1))))
 
         return Model(inputs=input, outputs=s_fc2)
