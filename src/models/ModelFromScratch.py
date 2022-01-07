@@ -2,7 +2,6 @@ from datetime import datetime
 
 import keras.engine.functional
 import numpy as np
-from keras import regularizers
 
 from src.models.Model import Model as MyModel
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -12,19 +11,15 @@ from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR
 
 import keras
 
-from keras.layers import BatchNormalization, Activation, Conv2D, GlobalAveragePooling2D, Dropout, MaxPool2D
 
 
 from os.path import join
 import os
 import re
-# from keras.layers import (Flatten, Dropout, ZeroPadding2D, BatchNormalization,
-#                           Activation, GlobalAveragePooling2D, MaxPool2D, Add)
+from keras.layers import (Dropout, BatchNormalization, Activation)
 
 from keras.layers import Dense
 from keras.models import Model
-
-import subprocess
 
 
 import pickle
@@ -33,15 +28,20 @@ import visualkeras
 
 import sys
 
-LR = 0.0001 # lr for age
-LR = 0.01 # lr for gender
+LR = 0.0001
 
 EPOCHS = 50
-BATCH_SIZE = 1024
+BATCH_SIZE = 512
 PATIENCE = 5
-DROPOUT = 0.3
+DROPOUT = 0.2
 
 # tensorboard --logdir log/fit/from_scratch
+
+
+def print_tensorboard_command():
+    path = os.path.normpath(ModelFromScratch.log_dir)
+    path = os.path.join(*path.split(os.sep)[1:])
+    print(f'Tensorboard: tensorboard --logdir {path}')
 
 
 class ModelFromScratch(MyModel):
@@ -64,20 +64,15 @@ class ModelFromScratch(MyModel):
 
     def init_model(self, input_size):
         '''
-
         # Neural Net
         input = keras.layers.Input(shape=input_size)
 
         # Hidden convolutional layers
         h_conv1 = Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input)))
         h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(h_conv1))))
-        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv2))))
-        h_conv4 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
-        h_conv5 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
-        h_conv6 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(1000, 1, padding='same')(h_conv5))))
 
         # Flatten layers after convolutions
-        h_conv6_flat = GlobalAveragePooling2D()(h_conv6)
+        h_conv6_flat = GlobalAveragePooling2D()(h_conv2)
 
         # Dense layers
         s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv6_flat))))
@@ -86,7 +81,8 @@ class ModelFromScratch(MyModel):
         return Model(inputs=input, outputs=s_fc2)
         '''
 
-        return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size, pooling='avg', weights=None)
+        return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size,
+                                                      pooling='avg', weights=None)
 
     def predict(self, image: np.array) -> (bool, int):
         pass
@@ -111,19 +107,15 @@ class ModelFromScratch(MyModel):
         )
 
         tensorboard_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=self.log_dir, histogram_freq=1, update_freq='batch')
+            log_dir=self.log_dir, histogram_freq=1, update_freq='batch', profile_batch=0)
 
         # Fit model
-        print(f'Tensorboard: tensorboard --logdir {ModelFromScratch.log_dir}')
+        print_tensorboard_command()
 
         print('>>> Start training')
         history = self.model.fit(x=x_train,
-                                 #y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
-                                 #validation_data=(x_val, [y_val['gender'], y_val['age']]),
-
-                                 y={'gender_output': y_train['gender']},
-                                 validation_data=(x_val, [y_val['gender']]),
-
+                                 y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
+                                 validation_data=(x_val, [y_val['gender'], y_val['age']]),
                                  use_multiprocessing=True,
                                  workers=os.cpu_count(),
                                  callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback],
@@ -194,14 +186,21 @@ class ModelFromScratch(MyModel):
         # layer as the last layer of the network. In order to accomplish the multitask learning I need to add
         # 2 new layers
 
-        # Output layers
-        gender_layer = Dense(1, activation='sigmoid', name='gender_output')(starting_model.output)
-        age_layer = Dense(1, activation='linear', name='age_output')(starting_model.output)
+        # Output layer of the model
+        final_layer = starting_model.output
+
+        # Gender layer
+        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
+        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(gender_layer))))
+        gender_layer = Dense(1, name='gender_output', activation='sigmoid')(gender_layer)
+
+        # Age layer
+        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
+        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(age_layer))))
+        age_layer = Dense(1, name='age_output', activation='linear')(age_layer)
+
         # Final model
         final_model = Model(inputs=starting_model.input, outputs=[gender_layer, age_layer],
-                            name='from_scratch_age_gender_clf')
-
-        final_model = Model(inputs=starting_model.input, outputs=[gender_layer],
                             name='from_scratch_age_gender_clf')
         # Compile the model
         losses = {
@@ -209,26 +208,14 @@ class ModelFromScratch(MyModel):
             "age_output": "mean_squared_error",
         }
         lossWeights = {
-            "gender_output": 1.0,
+            "gender_output": 3.0,
             "age_output": 1.0
         }
         metrics = {
             "gender_output": 'accuracy',
             "age_output": 'mean_absolute_error'
         }
+        optimizer = tf.keras.optimizers.Adam(LR)
 
-        losses = {
-            "gender_output": "binary_crossentropy"
-        }
-        metrics = {
-            "gender_output": 'accuracy',
-        }
-
-        #age: 0.01
-
-        optimizer = tf.keras.optimizers.Adam(LR, clipnorm=0.1)
-
-        final_model.compile(loss=losses,
-                            #loss_weights=lossWeights,
-                            metrics=metrics, optimizer=optimizer)
+        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=optimizer)
         return final_model
