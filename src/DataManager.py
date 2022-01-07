@@ -18,7 +18,19 @@ import math
 def read_dataset_metadata(dataset_path: str, metadata_filename: str):
     df = pd.read_pickle(join(dataset_path, metadata_filename))
     df['path'] = df['full_path'].apply(lambda x: join(dataset_path, x))
+    df = delete_nan_label_rows(df)
     return df
+
+
+def delete_nan_label_rows(dataset: pd.DataFrame, verbose=False):
+    n_rows_in = len(dataset.index)
+    for col in DataManager.y:
+        if dataset[col].isna().sum() > 0:
+            dataset_out = dataset.dropna(subset=[col])
+    if verbose:
+        n_rows_out = len(dataset.index)
+        print('Deleted ' + str(n_rows_in - n_rows_out) + ' rows')
+    return dataset_out
 
 
 def shuffle_dataset(dataset):
@@ -90,6 +102,7 @@ class DataManager:
                 # Normalize image
                 if self.normalize_images:
                     im = im / 255
+                    im = im.astype(np.float32)
                 # Append image
                 images[i] = im
                 # Update progress bar
@@ -147,11 +160,3 @@ class DataManager:
 
         n_col_out = len(df_train.columns)
         print('Deleted a maximum of ' + str(n_col_in - n_col_out) + ' columns')
-
-    def delete_nan_label_rows(self, dataset):
-        n_rows_in = len(dataset.index)
-        for col in ('gender', 'age'):
-            if dataset[col].isna().sum() > 0:
-                dataset.dropna(subset=[col], inplace=True)
-        n_rows_out = len(dataset.index)
-        print('Deleted ' + str(n_rows_in - n_rows_out) + ' rows')
