@@ -2,6 +2,7 @@ from datetime import datetime
 
 import keras.engine.functional
 import numpy as np
+from keras import regularizers
 
 from src.models.Model import Model as MyModel
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -32,11 +33,12 @@ import visualkeras
 
 import sys
 
-LR = 0.001
+LR = 0.0001 # lr for age
+LR = 0.01 # lr for gender
+
 EPOCHS = 50
-BATCH_SIZE = 64
+BATCH_SIZE = 1024
 PATIENCE = 5
-CLIPNORM = 1
 DROPOUT = 0.3
 
 # tensorboard --logdir log/fit/from_scratch
@@ -61,6 +63,8 @@ class ModelFromScratch(MyModel):
         self.save_summary_output()
 
     def init_model(self, input_size):
+        '''
+
         # Neural Net
         input = keras.layers.Input(shape=input_size)
 
@@ -73,15 +77,16 @@ class ModelFromScratch(MyModel):
         h_conv6 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(1000, 1, padding='same')(h_conv5))))
 
         # Flatten layers after convolutions
-        h_conv6_flat = GlobalAveragePooling2D(h_conv6)
+        h_conv6_flat = GlobalAveragePooling2D()(h_conv6)
 
         # Dense layers
         s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv6_flat))))
         s_fc2 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(s_fc1))))
 
         return Model(inputs=input, outputs=s_fc2)
+        '''
 
-        #return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size, pooling='avg', weights=None)
+        return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size, pooling='avg', weights=None)
 
     def predict(self, image: np.array) -> (bool, int):
         pass
@@ -109,10 +114,16 @@ class ModelFromScratch(MyModel):
             log_dir=self.log_dir, histogram_freq=1, update_freq='batch')
 
         # Fit model
+        print(f'Tensorboard: tensorboard --logdir {ModelFromScratch.log_dir}')
+
         print('>>> Start training')
         history = self.model.fit(x=x_train,
-                                 y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
-                                 validation_data=(x_val, [y_val['gender'], y_val['age']]),
+                                 #y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
+                                 #validation_data=(x_val, [y_val['gender'], y_val['age']]),
+
+                                 y={'gender_output': y_train['gender']},
+                                 validation_data=(x_val, [y_val['gender']]),
+
                                  use_multiprocessing=True,
                                  workers=os.cpu_count(),
                                  callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback],
@@ -189,19 +200,35 @@ class ModelFromScratch(MyModel):
         # Final model
         final_model = Model(inputs=starting_model.input, outputs=[gender_layer, age_layer],
                             name='from_scratch_age_gender_clf')
+
+        final_model = Model(inputs=starting_model.input, outputs=[gender_layer],
+                            name='from_scratch_age_gender_clf')
         # Compile the model
         losses = {
             "gender_output": "binary_crossentropy",
             "age_output": "mean_squared_error",
         }
         lossWeights = {
-            "gender_output": 2.0,
+            "gender_output": 1.0,
             "age_output": 1.0
         }
         metrics = {
             "gender_output": 'accuracy',
             "age_output": 'mean_absolute_error'
         }
-        optimizer = tf.keras.optimizers.Adam(LR)
-        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=optimizer)
+
+        losses = {
+            "gender_output": "binary_crossentropy"
+        }
+        metrics = {
+            "gender_output": 'accuracy',
+        }
+
+        #age: 0.01
+
+        optimizer = tf.keras.optimizers.Adam(LR, clipnorm=0.1)
+
+        final_model.compile(loss=losses,
+                            #loss_weights=lossWeights,
+                            metrics=metrics, optimizer=optimizer)
         return final_model
