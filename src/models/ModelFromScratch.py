@@ -107,7 +107,7 @@ class ModelFromScratch(MyModel):
         )
 
         tensorboard_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=self.log_dir, histogram_freq=1, update_freq='batch', profile_batch=0)
+            log_dir=self.log_dir, histogram_freq=1, update_freq='batch')
 
         # Fit model
         print_tensorboard_command()
