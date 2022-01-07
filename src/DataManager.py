@@ -134,3 +134,24 @@ class DataManager:
 
     def inverse_standardize_age(self, ages):
         return self.scaler.inverse_transform(ages)
+
+    def delete_nan_columns(self, df_train, df_val, df_test):
+        n_col_in = len(df_train.columns)
+
+        for df in (df_train, df_val, df_test):
+            for col in df.columns:
+                if df[col].isna().sum() > 0 and col != 'gender' and col != 'age':
+                    df_train.drop(col, inplace=True, axis=1, errors='ignore')
+                    df_val.drop(col, inplace=True, axis=1, errors='ignore')
+                    df_test.drop(col, inplace=True, axis=1, errors='ignore')
+
+        n_col_out = len(df_train.columns)
+        print('Deleted a maximum of ' + str(n_col_in - n_col_out) + ' columns')
+
+    def delete_nan_label_rows(self, dataset):
+        n_rows_in = len(dataset.index)
+        for col in ('gender', 'age'):
+            if dataset[col].isna().sum() > 0:
+                dataset.dropna(subset=[col], inplace=True)
+        n_rows_out = len(dataset.index)
+        print('Deleted ' + str(n_rows_in - n_rows_out) + ' rows')
