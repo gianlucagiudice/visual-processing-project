@@ -5,6 +5,8 @@ from os.path import join
 import cv2
 import numpy as np
 from skimage import feature, color
+import pandas as pd
+from tqdm import tqdm
 
 from src.config import CHECKPOINT_DIR, LOG_DIR
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -16,22 +18,20 @@ class HandcraftedModel(MyModel):
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
     log_dir = join(LOG_DIR, 'fit', 'handcrafted/') + datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    def __init__(self, input_size=IMAGE_INPUT_SIZE):
+    def __init__(self, n_sift, color_hist_bins, lbp_n_points, lbp_radius, input_size=IMAGE_INPUT_SIZE):
         super().__init__(input_size)
-
-        # define the model
-
-        # save the model
+        self.n_sift = n_sift
+        self.color_hist_bins = color_hist_bins
+        self.lbp_n_points = lbp_n_points
+        self.lbp_radius = lbp_radius
 
     def predict(self, image: np.array) -> (bool, int):
         pass
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
 
-        # feature extraction
-        for img in x_train:
-            img_features = self.extract_features(img)
-            # append to x_train_features and do the same with test and val
+        # features
+        self.load_features()
 
         # train
 
@@ -47,20 +47,30 @@ class HandcraftedModel(MyModel):
         # Load the weights of the model
         pass
 
+    def load_features(self):
+        pass
+
+    def extract_dataset_features(self, X, y):
+        df = pd.DataFrame()
+
+        print('Extracting dataset features ...')
+        with tqdm(total=X.shape[0]) as pbar:
+            for x in X:
+                features = self.extract_features(x)
+                df = df.append(features, ignore_index=True)
+                pbar.update(1)
+
+        df["gender"] = y["gender"]
+        df["age"] = y["age"]
+
+        return df
+
     def extract_features(self, img):
-
-        features = []
-
-        # HAAR - on the entire face, preconfigured cascade detectors
-        # TODO: tuning!!!
-        face_rect, eye_rect = self.extract_haar(img)
-        img_haar = face_rect.tolist()
-        img_haar.extend(eye_rect.tolist())
 
         grey = color.rgb2gray(img)
 
         # SIFT - on the entire face
-        _, descriptors = self.extract_sift(grey)
+        _, descriptors = self.extract_sift(grey, self.n_sift)
         img_sift = [d.tolist() for d in descriptors]
 
         # division in 4 parts
@@ -69,7 +79,7 @@ class HandcraftedModel(MyModel):
         # color histogram (4 lists of 3 histograms)
         img_color_hist = []
         for part in img_parts:
-            img_color_hist.extend(self.color_histogram(part))
+            img_color_hist.extend(self.color_histogram(part, self.color_hist_bins))
 
         grey_parts = []
         for part in img_parts:
@@ -77,17 +87,23 @@ class HandcraftedModel(MyModel):
 
         # LBP on grey channel - histogram
         img_lbp = []
-        # TODO: parameters to be tuned!!!
-        num_points = 24
-        radius = 8
         for grey_part in grey_parts:
-            img_lbp.append(self.compute_lbp(grey_part, num_points, radius).tolist())
+            img_lbp.append(self.compute_lbp(grey_part, self.lbp_n_points, self.lbp_radius).tolist())
 
         # vector of features
-        features.extend(img_haar)  # n bbox arrays (4 points for every bbox)
-        features.extend(img_color_hist)  # 12 arrays of 256 numbers
-        features.extend(img_lbp)  # 4 arrays of 26 numbers
-        features.extend(img_sift)  # n arrays of 128 numbers
+        df = {}
+        for i in range(len(img_color_hist)):  # 12 arrays of 256 numbers
+            col_name = 'color_hist_' + str(i)
+            df[col_name] = img_color_hist[i]
+        for i in range(len(img_lbp)):  # 4 arrays of 26 numbers
+            col_name = 'lbp_' + str(i)
+            df[col_name] = img_lbp[i]
+        for i in range(len(img_sift)):  # n arrays of 128 numbers
+            col_name = 'sift_' + str(i)
+            df[col_name] = img_sift[i]
+
+        features = pd.DataFrame()
+        features = features.append(df, ignore_index=True)
 
         return features
 
@@ -127,33 +143,19 @@ class HandcraftedModel(MyModel):
         return hist
 
     @staticmethod
-    def color_histogram(img):
+    def color_histogram(img, bins=256):
         histograms = []
         for ch in range(3):
-            histogram, _ = np.histogram(img[:, :, ch], bins=256, range=(0, 256))
+            histogram, _ = np.histogram(img[:, :, ch], bins=bins, range=(0, 256))
             histograms.append(histogram.tolist())
         return histograms
 
     @staticmethod
-    def extract_sift(img):
-        detector = cv2.SIFT_create()
+    def extract_sift(img, n_sift):
+        detector = cv2.SIFT_create(nfeatures=n_sift)
         # detect features from the image
         image8bit = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
         keypoints, descriptors = detector.detectAndCompute(image8bit, None)
 
         return keypoints, descriptors
 
-    @staticmethod
-    def extract_haar(img):
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')
-
-        face_rect = face_cascade.detectMultiScale(img,
-                                                  scaleFactor=1.2,
-                                                  minNeighbors=5)
-
-        eye_rect = eye_cascade.detectMultiScale(img,
-                                                scaleFactor=1.2,
-                                                minNeighbors=5)
-
-        return face_rect, eye_rect
