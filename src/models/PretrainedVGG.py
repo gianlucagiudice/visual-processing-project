@@ -59,8 +59,16 @@ class PretrainedVGG(MyModel):
         self.save_summary_output()
 
     def init_model(self, last_layer):
-        vgg_model = tf.keras.applications.VGG16(include_top=True, pooling='avg', weights="imagenet")
-        return Model(inputs=vgg_model.input, outputs=vgg_model.get_layer(last_layer).output)
+        base_vgg16_model = tf.keras.applications.VGG16(include_top=True, pooling='avg', weights="imagenet")
+        vgg16_model = Model(inputs=base_vgg16_model.input, outputs=base_vgg16_model.get_layer(last_layer).output)
+
+        # Blocking the weights of the previous layers
+        for layer in vgg16_model.layers:
+            layer.trainable = False
+
+        return vgg16_model
+
+
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
         # Create checkpoint directory
