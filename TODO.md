@@ -53,3 +53,6 @@ Suddivisione dei task:
       - Colore
       - HAAR
       - SIFT
+
+## Domande
+- Come viene fatta la detection di una faccia? Prendiamo quella con confidenza maggiore?
