@@ -13,10 +13,13 @@ OUTPUT_IMAGE_FOLDER = join('..', 'doc', 'images')
 OUTPUT_REPORT_FOLDER = join('..', 'doc', 'reports')
 
 # Checkpoint dir
-CHECKPOINT_DIR = join('..', 'checkpoint')
+CHECKPOINT_DIR = join('..', 'temp', 'checkpoint')
 
 # Log dir
-LOG_DIR = join('..', 'log')
+LOG_DIR = join('..', 'temp', 'log')
+
+# Save model dir
+SAVE_MODEL_DIR = join('..', 'model')
 
 
 
