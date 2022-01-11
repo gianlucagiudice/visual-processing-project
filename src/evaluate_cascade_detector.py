@@ -24,5 +24,8 @@ for f in files:
 
     cv2.imshow(f, img)
 
-    k = cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    try:
+        k = cv2.waitKey(0)
+        cv2.destroyAllWindows()
+    except:
+        break

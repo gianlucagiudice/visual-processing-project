@@ -3,7 +3,7 @@ from src.DataManager import DataManager
 from config import IMBD_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
 from src.models.Model import IMAGE_INPUT_SIZE
 
-N_SAMPLE = 10000 # Con 70 funziona, con 71 no
+N_SAMPLE = 1000 # Con 70 funziona, con 71 no
 
 # Read the data
 data_manager = DataManager(IMDB_CROPPED_PATH, IMBD_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE,
