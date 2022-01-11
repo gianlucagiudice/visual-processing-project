@@ -53,6 +53,9 @@ Suddivisione dei task:
       - Colore
       - HAAR
       - SIFT
+- Bot telegram: Luca
+- Retrieval: Gianluca
+- Filtraggio: Lucrezia
 
 ## Domande
 - Come viene fatta la detection di una faccia? Prendiamo quella con confidenza maggiore?
