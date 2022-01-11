@@ -1,32 +1,22 @@
+import os
+import pickle
+import re
+import shutil
+import sys
 from datetime import datetime
+from os.path import join
 
 import keras.engine.functional
 import numpy as np
-
-from src.models.Model import Model as MyModel
-from src.models.Model import IMAGE_INPUT_SIZE
-
 import tensorflow as tf
-from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR
-
-import keras
-
-
-
-from os.path import join
-import os
-import re
-from keras.layers import (Dropout, BatchNormalization, Activation)
-
+import visualkeras
 from keras.layers import Dense
+from keras.layers import (Dropout, BatchNormalization, Activation)
 from keras.models import Model
 
-
-import pickle
-
-import visualkeras
-
-import sys
+from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR, SAVE_MODEL_DIR
+from src.models.Model import IMAGE_INPUT_SIZE
+from src.models.Model import Model as MyModel
 
 LR = 0.0001
 
@@ -39,19 +29,30 @@ DROPOUT = 0.2
 
 
 def print_tensorboard_command():
-    path = os.path.normpath(ModelFromScratch.log_dir)
+    path = os.path.normpath(ModelFromScratch.log_dir_training)
     path = os.path.join(*path.split(os.sep)[1:])
     print(f'Tensorboard: tensorboard --logdir {path}')
 
 
+def init_temp_dirs():
+    # Remove directories
+    shutil.rmtree(ModelFromScratch.log_dir, ignore_errors=True)
+    shutil.rmtree(ModelFromScratch.checkpoint_dir, ignore_errors=True)
+    # Create directories
+    os.makedirs(ModelFromScratch.log_dir, exist_ok=True)
+    os.makedirs(ModelFromScratch.checkpoint_dir, exist_ok=True)
+
+
 class ModelFromScratch(MyModel):
     checkpoint_dir = join(CHECKPOINT_DIR, 'from_scratch')
-    checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
-    log_dir = join(LOG_DIR, 'fit', 'from_scratch/') + datetime.now().strftime("%Y%m%d-%H%M%S")
+    checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.h5')
+    log_dir = join(LOG_DIR, 'fit', 'from_scratch/')
+    log_dir_training = log_dir + datetime.now().strftime("%Y%m%d-%H%M%S")
+    model_name = 'from_scratch'
 
     def __init__(self, input_size=IMAGE_INPUT_SIZE):
         super().__init__(input_size)
-        # Backbone: Resnet50
+        # Backbone: MobileNetV3Small
         self.model = self.init_model(input_size)
         # Reset weights
         #self.model = self.reset_weights(self.model)
@@ -88,8 +89,8 @@ class ModelFromScratch(MyModel):
         pass
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
-        # Create checkpoint directory
-        os.makedirs(self.checkpoint_dir, exist_ok=True)
+        # Init temp directories
+        init_temp_dirs()
 
         # Define callbacks
         early_stopping_callback = tf.keras.callbacks.EarlyStopping(
@@ -107,7 +108,7 @@ class ModelFromScratch(MyModel):
         )
 
         tensorboard_callback = tf.keras.callbacks.TensorBoard(
-            log_dir=self.log_dir, histogram_freq=1, update_freq='batch')
+            log_dir=self.log_dir_training, histogram_freq=1, update_freq='batch')
 
         # Fit model
         print_tensorboard_command()
@@ -126,7 +127,10 @@ class ModelFromScratch(MyModel):
             pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Load best weights
-        #self.load_best_weights()
+        self.load_best_weights()
+
+        # Save the model
+        self.model.save(join(SAVE_MODEL_DIR, ModelFromScratch.model_name + '.h5'))
 
         # Evaluate model
         self.evaluate(x_test, y_test)
