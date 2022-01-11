@@ -22,7 +22,7 @@ from keras.models import Model
 
 import pickle
 
-# import visualkeras
+import visualkeras
 
 import sys
 
@@ -64,7 +64,12 @@ class PretrainedVGG(MyModel):
 
         # Blocking the weights of the previous layers
         for layer in vgg16_model.layers:
+            if layer.name == 'block5_conv1':
+                break
             layer.trainable = False
+
+        for layer in vgg16_model.layers:
+            print(layer.name + ' = ', layer.trainable)
 
         return vgg16_model
 
@@ -129,8 +134,8 @@ class PretrainedVGG(MyModel):
 
     def save_plot_network(self):
         file_path = join(OUTPUT_IMAGE_FOLDER, 'pretrained_vgg.png')
-        #visualkeras.layered_view(self.model, legend=True, to_file=file_path,
-        #                         scale_xy=2, scale_z=2, max_z=6, spacing=5)
+        visualkeras.layered_view(self.model, legend=True, to_file=file_path,
+                                 scale_xy=2, scale_z=2, max_z=6, spacing=5)
 
     def save_summary_output(self):
         file_path = join(OUTPUT_REPORT_FOLDER, 'pretrained_vgg.txt')
