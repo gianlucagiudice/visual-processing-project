@@ -1,9 +1,9 @@
-from src.models.ModelFromScratch import ModelFromScratch
+from src.models.PretrainedVGG import PretrainedVGG
 from src.DataManager import DataManager
 from config import IMBD_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
 from src.models.Model import IMAGE_INPUT_SIZE
 
-N_SAMPLE = 70 # Con 70 funziona, con 71 no
+N_SAMPLE = 700 # Con 70 funziona, con 71 no
 
 # Read the data
 data_manager = DataManager(IMDB_CROPPED_PATH, IMBD_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE,
@@ -21,8 +21,5 @@ X_val, y_val = data_manager.get_X(validation), data_manager.get_y(validation)
 print('Read test images ...')
 X_test, y_test = data_manager.get_X(test), data_manager.get_y(test)
 
-model_from_scratch = ModelFromScratch()
-model_from_scratch.train(X_train, y_train, X_val, y_val, X_test, y_test)
-
-
-
+pretrained_vgg16 = PretrainedVGG()
+pretrained_vgg16.train(X_train, y_train, X_val, y_val, X_test, y_test)

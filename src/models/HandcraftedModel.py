@@ -4,8 +4,9 @@ from os.path import join
 
 import cv2
 import numpy as np
-from skimage import feature, color
 import pandas as pd
+from skimage import feature, color
+from skimage.feature import hog
 from tqdm import tqdm
 
 from src.config import CHECKPOINT_DIR, LOG_DIR
@@ -56,12 +57,13 @@ class HandcraftedModel(MyModel):
         print('Extracting dataset features ...')
         with tqdm(total=X.shape[0]) as pbar:
             for x in X:
+                x = self.equalize_histogram(x)
                 features = self.extract_features(x)
                 df = df.append(features, ignore_index=True)
                 pbar.update(1)
 
-        df["gender"] = y["gender"]
-        df["age"] = y["age"]
+        df["gender"] = y["gender"].values
+        df["age"] = y["age"].values
 
         return df
 
@@ -72,6 +74,9 @@ class HandcraftedModel(MyModel):
         # SIFT - on the entire face
         _, descriptors = self.extract_sift(grey, self.n_sift)
         img_sift = [d.tolist() for d in descriptors]
+
+        # HOG - on the entire face
+        hog = self.extract_hog(img)
 
         # division in 4 parts
         img_parts = self.crop_image_4(img)
@@ -86,21 +91,36 @@ class HandcraftedModel(MyModel):
             grey_parts.append(color.rgb2gray(part))
 
         # LBP on grey channel - histogram
-        img_lbp = []
+        img_lbp = {}
+        i = 0
         for grey_part in grey_parts:
-            img_lbp.append(self.compute_lbp(grey_part, self.lbp_n_points, self.lbp_radius).tolist())
+            lbp = self.compute_lbp(grey_part, self.lbp_n_points, self.lbp_radius).tolist()
+            for el in lbp:
+                img_lbp[i] = el
+                i = i + 1
+
+        hist = self.compute_lbp(grey, self.lbp_n_points, self.lbp_radius)
 
         # vector of features
         df = {}
-        for i in range(len(img_color_hist)):  # 12 arrays of 256 numbers
-            col_name = 'color_hist_' + str(i)
-            df[col_name] = img_color_hist[i]
-        for i in range(len(img_lbp)):  # 4 arrays of 26 numbers
-            col_name = 'lbp_' + str(i)
-            df[col_name] = img_lbp[i]
-        for i in range(len(img_sift)):  # n arrays of 128 numbers
-            col_name = 'sift_' + str(i)
-            df[col_name] = img_sift[i]
+        i = 0
+        for h in hist:
+            df[i] = h
+            i = i + 1
+        for s in img_sift:
+            df[i] = s
+            i = i + 1
+
+        #        for i in range(len(img_color_hist)):  # 12 arrays of 256 numbers
+        #            col_name = 'color_hist_' + str(i)
+        #            df[col_name] = img_color_hist[i]
+        #        for i in range(len(img_lbp)):  # 4 arrays of 26 numbers
+        #            col_name = 'lbp_' + str(i)
+        #            df[col_name] = img_lbp[i]
+
+        #        for i in range(len(img_sift)):  # n arrays of 128 numbers
+        #            col_name = 'sift_' + str(i)
+        #            df[col_name] = img_sift[i]
 
         features = pd.DataFrame()
         features = features.append(df, ignore_index=True)
@@ -136,10 +156,13 @@ class HandcraftedModel(MyModel):
         (hist, _) = np.histogram(lbp.ravel(),
                                  bins=np.arange(0, num_points + 3),
                                  range=(0, num_points + 2))
-        # normalize the histogram
+        # normalize
         hist = hist.astype("float")
         hist /= (hist.sum() + eps)
-        # return the histogram of Local Binary Patterns
+
+        cv2.normalize(hist, hist)
+        hist.flatten()
+
         return hist
 
     @staticmethod
@@ -148,6 +171,11 @@ class HandcraftedModel(MyModel):
         for ch in range(3):
             histogram, _ = np.histogram(img[:, :, ch], bins=bins, range=(0, 256))
             histograms.append(histogram.tolist())
+
+        # normalize
+        for i in range(len(histograms)):
+            histograms[i] = [x / sum(histograms[i]) for x in histograms[i]]
+
         return histograms
 
     @staticmethod
@@ -157,5 +185,24 @@ class HandcraftedModel(MyModel):
         image8bit = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
         keypoints, descriptors = detector.detectAndCompute(image8bit, None)
 
+        # normalize descriptors
+        for i in range(len(descriptors)):
+            descriptors[i] = [x / sum(descriptors[i]) for x in descriptors[i]]
+
         return keypoints, descriptors
 
+    @staticmethod
+    def extract_hog(img):
+        fd, hog_image = hog(img, orientations=9, pixels_per_cell=(16, 16),
+                            cells_per_block=(2, 2), visualize=True, multichannel=True)
+
+        return fd
+
+    @staticmethod
+    def equalize_histogram(rgb_img):
+        rgb_img = np.uint8(rgb_img)
+        ycrcb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2YCrCb)
+        ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
+        equalized_img = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
+
+        return equalized_img
