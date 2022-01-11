@@ -86,7 +86,24 @@ class ModelFromScratch(MyModel):
                                                       pooling='avg', weights=None)
 
     def predict(self, image: np.array) -> (bool, int):
-        pass
+        return self.model.predict(image)
+
+    def extract_feature(self, image):
+        output_1 = 'activation_1'
+        output_2 = 'activation_3'
+
+        intermediate_1 = keras.models.Model(inputs=self.model.layers[0].input,
+                                            outputs=self.model.get_layer(output_1).output)
+        intermediate_2 = keras.models.Model(inputs=self.model.layers[0].input,
+                                            outputs=self.model.get_layer(output_2).output)
+
+        features_1 = intermediate_1.predict(image)
+        features_2 = intermediate_2.predict(image)
+
+        return np.concatenate([features_1, features_2], axis=1).flatten()
+
+    def get_input_shape(self):
+        return self.model.layers[0].input.shape[1:]
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
         # Init temp directories

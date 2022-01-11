@@ -91,26 +91,31 @@ class DataManager:
         # Start reading of the images
         with tqdm(total=files.size) as pbar:
             for i, image in enumerate(files):
-                # Read image
-                im = cv2.imread(image)
-                # Change color space
-                im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-                # Remove padding
-                im = self.crop_image(im)
-                # Resize image
-                im = cv2.resize(im, (self.resize_shape[0], self.resize_shape[1]))
-                # Normalize image
-                if self.normalize_images:
-                    im = im / 255
-                    im = im.astype(np.float32)
                 # Append image
-                images[i] = im
+                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images)
                 # Update progress bar
                 pbar.update(1)
 
         return images
 
-    def crop_image(self, im, padding=PADDING):
+    @staticmethod
+    def read_image(image, resize_shape, normalize, ):
+        # Read image
+        im = cv2.imread(image)
+        # Change color space
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+        # Remove padding
+        im = DataManager.crop_image(im)
+        # Resize image
+        im = cv2.resize(im, (resize_shape[0], resize_shape[1]))
+        # Normalize image
+        if normalize:
+            im = im / 255
+            im = im.astype(np.float32)
+        return im
+
+    @staticmethod
+    def crop_image(im, padding=PADDING):
         height, width, _ = im.shape
         ratio = 1 / (1 + padding)
 
