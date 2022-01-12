@@ -18,7 +18,6 @@ import math
 def read_dataset_metadata(dataset_path: str, metadata_filename: str):
     df = pd.read_pickle(join(dataset_path, metadata_filename))
     df['path'] = df['full_path'].apply(lambda x: join(dataset_path, x))
-    df = delete_nan_label_rows(df)
     return df
 
 

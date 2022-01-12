@@ -9,6 +9,7 @@ from skimage import feature, color
 from skimage.feature import hog
 from tqdm import tqdm
 
+from src.EnhancementUtils import EnhancementUtils
 from src.config import CHECKPOINT_DIR, LOG_DIR
 from src.models.Model import IMAGE_INPUT_SIZE
 from src.models.Model import Model as MyModel
@@ -25,6 +26,7 @@ class HandcraftedModel(MyModel):
         self.color_hist_bins = color_hist_bins
         self.lbp_n_points = lbp_n_points
         self.lbp_radius = lbp_radius
+        self.enhancement = EnhancementUtils()
 
     def predict(self, image: np.array) -> (bool, int):
         pass
@@ -55,9 +57,10 @@ class HandcraftedModel(MyModel):
         df = pd.DataFrame()
 
         print('Extracting dataset features ...')
-        with tqdm(total=X.shape[0]) as pbar:
+        with tqdm(total=len(X)) as pbar:
             for x in X:
-                x = self.equalize_histogram(x)
+                x = self.enhancement.equalize_histogram(x)
+                x = self.enhancement.bilateral_filter(x)
                 features = self.extract_features(x)
                 df = df.append(features, ignore_index=True)
                 pbar.update(1)
@@ -108,19 +111,9 @@ class HandcraftedModel(MyModel):
             df[i] = h
             i = i + 1
         for s in img_sift:
-            df[i] = s
-            i = i + 1
-
-        #        for i in range(len(img_color_hist)):  # 12 arrays of 256 numbers
-        #            col_name = 'color_hist_' + str(i)
-        #            df[col_name] = img_color_hist[i]
-        #        for i in range(len(img_lbp)):  # 4 arrays of 26 numbers
-        #            col_name = 'lbp_' + str(i)
-        #            df[col_name] = img_lbp[i]
-
-        #        for i in range(len(img_sift)):  # n arrays of 128 numbers
-        #            col_name = 'sift_' + str(i)
-        #            df[col_name] = img_sift[i]
+            for el in s:
+                df[i] = el
+                i = i + 1
 
         features = pd.DataFrame()
         features = features.append(df, ignore_index=True)
@@ -197,12 +190,3 @@ class HandcraftedModel(MyModel):
                             cells_per_block=(2, 2), visualize=True, multichannel=True)
 
         return fd
-
-    @staticmethod
-    def equalize_histogram(rgb_img):
-        rgb_img = np.uint8(rgb_img)
-        ycrcb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2YCrCb)
-        ycrcb_img[:, :, 0] = cv2.equalizeHist(ycrcb_img[:, :, 0])
-        equalized_img = cv2.cvtColor(ycrcb_img, cv2.COLOR_YCrCb2BGR)
-
-        return equalized_img
