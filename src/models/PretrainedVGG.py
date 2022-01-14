@@ -26,7 +26,7 @@ import sys
 
 LR = 0.001
 
-EPOCHS = 10
+EPOCHS = 50
 BATCH_SIZE = 512
 PATIENCE = 5
 DROPOUT = 0.5
