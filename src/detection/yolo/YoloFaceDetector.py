@@ -4,7 +4,7 @@ from os.path import join
 
 class YoloFaceDetector:
 
-    DEFAULT_MODEL_PATH = join('..', 'model', 'trained_face_yolo.h5')
+    DEFAULT_MODEL_PATH = join('..', 'model', 'yolo_finetuned_best.h5')
     DEFAULT_CLASSES_PATH = join('..', 'libs', 'yolo3_keras', 'model_data', 'fddb_classes.txt')
     DEFAULT_ANCHORS_PATH =  join('..', 'libs', 'yolo3_keras', 'model_data', 'yolo_anchors.txt')
 
@@ -17,9 +17,12 @@ class YoloFaceDetector:
 
     def detect_image(self, image):
         res = self.yolo_model.detect_image(image, verbose=False)
-        res = list(zip(res[0], res[1]))
+        res_swapped = []
+
+        for box in res[0]:
+            a, b, c, d = box
+            res_swapped.append([b, a, d, c])
+
+        res = list(zip(res_swapped, res[1]))
         res_sorted = sorted(list(res), key=lambda x: x[1], reverse=True)
-        if res_sorted:
-            return res_sorted[0]
-        else:
-            return None, None
+        return res_sorted
