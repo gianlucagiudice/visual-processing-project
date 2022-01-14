@@ -53,7 +53,7 @@ class HandcraftedModel(MyModel):
     def load_features(self):
         pass
 
-    def extract_dataset_features(self, X, y):
+    def extract_dataset_features(self, X, y, compute_sift=True, compute_hog=True, compute_hist=True, compute_lbp=True):
         df = pd.DataFrame()
 
         print('Extracting dataset features ...')
@@ -61,7 +61,7 @@ class HandcraftedModel(MyModel):
             for x in X:
                 x = self.enhancement.equalize_histogram(x)
                 x = self.enhancement.bilateral_filter(x)
-                features = self.extract_features(x)
+                features = self.extract_features(x, compute_sift, compute_hog, compute_hist, compute_lbp)
                 df = df.append(features, ignore_index=True)
                 pbar.update(1)
 
@@ -70,49 +70,50 @@ class HandcraftedModel(MyModel):
 
         return df
 
-    def extract_features(self, img):
-
+    def extract_features(self, img, compute_sift=True, compute_hog=True, compute_hist=True, compute_lbp=True):
+        # to grey
         grey = color.rgb2gray(img)
-
-        # SIFT - on the entire face
-        _, descriptors = self.extract_sift(grey, self.n_sift)
-        img_sift = [d.tolist() for d in descriptors]
-
-        # HOG - on the entire face
-        hog = self.extract_hog(img)
-
-        # division in 4 parts
+        # division in 4 parts of original img
         img_parts = self.crop_image_4(img)
-
-        # color histogram (4 lists of 3 histograms)
-        img_color_hist = []
-        for part in img_parts:
-            img_color_hist.extend(self.color_histogram(part, self.color_hist_bins))
-
+        # division in parts of grey img
         grey_parts = []
         for part in img_parts:
             grey_parts.append(color.rgb2gray(part))
 
-        # LBP on grey channel - histogram
-        img_lbp = {}
-        i = 0
-        for grey_part in grey_parts:
-            lbp = self.compute_lbp(grey_part, self.lbp_n_points, self.lbp_radius).tolist()
-            for el in lbp:
-                img_lbp[i] = el
-                i = i + 1
-
-        hist = self.compute_lbp(grey, self.lbp_n_points, self.lbp_radius)
-
         # vector of features
         df = {}
         i = 0
-        for h in hist:
-            df[i] = h
-            i = i + 1
-        for s in img_sift:
-            for el in s:
-                df[i] = el
+
+        if compute_sift:
+            # SIFT - on the entire face
+            _, descriptors = self.extract_sift(grey, self.n_sift)
+            img_sift = [d.tolist() for d in descriptors]
+            for s in img_sift:
+                for el in s:
+                    df[i] = el
+                    i = i + 1
+
+        if compute_hog:
+            # HOG - on the entire face
+            img_hog = self.extract_hog(img)
+            for h in img_hog:
+                df[i] = h
+                i = i + 1
+
+        if compute_hist:
+            # color histogram (4 lists of 3 histograms)
+            img_color_hist = []
+            for part in img_parts:
+                img_color_hist.extend(self.color_histogram(part, self.color_hist_bins))
+            for h in img_color_hist:
+                for el in h:
+                    df[i] = el
+                    i = i + 1
+
+        if compute_lbp:
+            img_lbp = self.compute_lbp(grey, self.lbp_n_points, self.lbp_radius)
+            for h in img_lbp:
+                df[i] = h
                 i = i + 1
 
         features = pd.DataFrame()
@@ -177,7 +178,6 @@ class HandcraftedModel(MyModel):
         # detect features from the image
         image8bit = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
         keypoints, descriptors = detector.detectAndCompute(image8bit, None)
-
         # normalize descriptors
         for i in range(len(descriptors)):
             descriptors[i] = [x / sum(descriptors[i]) for x in descriptors[i]]
