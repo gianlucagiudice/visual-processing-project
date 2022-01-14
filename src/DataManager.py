@@ -137,9 +137,6 @@ class DataManager:
         # Normalize images
         self.normalize_images = normalize_images
 
-    def get_scaler(self):
-        return self.scaler
-
     def get_dataset(self):
         return self.dataset
 
