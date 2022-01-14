@@ -18,17 +18,15 @@ from keras.layers import (Dropout, BatchNormalization, Activation)
 
 from keras.layers import Dense
 from keras.models import Model
-
-
 import pickle
 
 import visualkeras
 
 import sys
 
-LR = 0.0001
+LR = 0.001
 
-EPOCHS = 50
+EPOCHS = 10
 BATCH_SIZE = 512
 PATIENCE = 5
 DROPOUT = 0.5
@@ -61,10 +59,9 @@ class PretrainedVGG(MyModel):
     def init_model(self, last_layer):
         base_vgg16_model = tf.keras.applications.VGG16(include_top=True, pooling='avg', weights="imagenet")
         vgg16_model = Model(inputs=base_vgg16_model.input, outputs=base_vgg16_model.get_layer(last_layer).output)
-
         # Blocking the weights of the previous layers
         for layer in vgg16_model.layers:
-            if layer.name == 'block5_conv1':
+            if layer.name == 'block4_conv1':
                 break
             layer.trainable = False
 
@@ -72,7 +69,6 @@ class PretrainedVGG(MyModel):
             print(layer.name + ' = ', layer.trainable)
 
         return vgg16_model
-
 
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
@@ -173,43 +169,46 @@ class PretrainedVGG(MyModel):
 
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
-        # Since in the ResNet50 constructor I specified the "include_top = False", the last 2 layers of the network
+        # Since in the VGG constructor I specified the "include_top = False", the last 2 layers of the network
         # are removed. By including "pooling = avg" the network is constructed inserting a GlobalAveragePooling2D
-        # layer as the last layer of the network. In order to accomplish the multitask learning I need to add
         # 2 new layers
 
         # Output layer of the model
         final_layer = starting_model.output
 
+
+
+
         # Gender layer
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(gender_layer))))
-        gender_layer = Dense(1, name='gender_output', activation='sigmoid')(gender_layer)
+        gender_layer = Dropout(DROPOUT)(Activation('relu')(Dense(64)(Dropout(DROPOUT)(final_layer))))
+        gender_layer = Dense(1, name = 'gender_output', activation = 'sigmoid')(BatchNormalization()(gender_layer))
 
         # Age layer
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(age_layer))))
-        age_layer = Dense(1, name='age_output', activation='linear')(age_layer)
+        age_layer = Dropout(DROPOUT)(Activation('relu')(Dense(64)(Dropout(DROPOUT)(final_layer))))
+        age_layer = Dense(1, name='age_output', activation='sigmoid')(BatchNormalization()(age_layer))
 
         # Final model
         final_model = Model(inputs=starting_model.input, outputs=[gender_layer, age_layer],
-                            name='from_scratch_age_gender_clf')
+                            name='pretrained_vgg_age_gender_clf')
         # Compile the model
         losses = {
             "gender_output": "binary_crossentropy",
             "age_output": "mean_squared_error",
         }
-        lossWeights = {
-            "gender_output": 3.0,
-            "age_output": 1.0
-        }
+        #lossWeights = {
+        #    "gender_output": 3.0,
+        #    "age_output": 1.0
+        #}
         metrics = {
             "gender_output": 'accuracy',
             "age_output": 'mean_absolute_error'
         }
         optimizer = tf.keras.optimizers.Adam(LR)
 
-        final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=optimizer)
+        final_model.compile(loss=losses,
+                            #loss_weights=lossWeights,
+                            metrics=metrics, optimizer=optimizer)
+
         return final_model
 
 
