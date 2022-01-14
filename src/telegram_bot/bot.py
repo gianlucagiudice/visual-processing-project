@@ -39,7 +39,6 @@ def on_chat_message(msg):
             if txt == '/start':
                 bot.sendMessage(chat_id, 'Ciao %s, benvenuto!\nInserisci una foto raffigurante una persona per inziare' % name)
 
-
         if content_type == 'photo':
             bot.download_file(msg['photo'][-1]['file_id'], 'received_image.png')
             img = cv2.imread('received_image.png')
@@ -56,9 +55,10 @@ def on_chat_message(msg):
 
             bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
-            FACES = cascade_face_detector.detect_image(img_rescaled)
-            #FACES = yolo_face_detector.detect_image(Image.fromarray(img_rescaled)) <-- NON FUNZIONA
-            #print(FACES)
+            with graph.as_default():
+                with session.as_default():
+                    FACES = yolo_face_detector.detect_image(Image.fromarray(img_rescaled))
+            print(FACES)
 
             num_faces_found = len(FACES)
 
@@ -203,23 +203,40 @@ def make_vgg_predictions(model_gender, model_age, img):
 
 
 bot = telepot.Bot(TOKEN)
+bot.setWebhook()  # unset webhook by supplying no parameter
 bot.message_loop(on_chat_message)
 print('Listening ...')
 
 # Loading detector
-cascade_face_detector = CascadeFaceDetector()
-yolo_face_detector = YoloFaceDetector()
+#cascade_face_detector = CascadeFaceDetector()
 
-keras.backend.clear_session()
+global graph
+import tensorflow.compat.v1 as tf
 
+graph = tf.compat.v1.get_default_graph()
+
+global session
+
+global yolo_face_detector
+
+with graph.as_default():
+    session = tf.Session(graph=graph)
+    with session.as_default():
+
+        yolo_face_detector = YoloFaceDetector(model_path='../../model/yolo_finetuned_best.h5',
+                                              classes_path='../../libs/yolo3_keras/model_data/fddb_classes.txt',
+                                              anchors_path='../../libs/yolo3_keras/model_data/yolo_anchors.txt')
+
+#keras.backend.clear_session()
+
+'''
 gender_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_gender_best.h5'))
 age_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_age_best.h5'))
 
 gender_vgg_model._make_predict_function()
 age_vgg_model._make_predict_function()
+'''
 
-global graph
-graph = tf.compat.v1.get_default_graph()
 
 print(f'Step: {0}')
 
