@@ -27,9 +27,9 @@ line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST
 f.write(line + '\n')
 
 # Define the model
-n_sift = 50
+n_sift = 25  # explain with velocity
 color_hist_bins = 128
-lbp_n_points = 24
+lbp_n_points = 24  # little increase of performance with these values
 lbp_radius = 3
 compute_sift = True
 compute_hog = True
@@ -37,6 +37,5 @@ compute_hist = True
 compute_lbp = True
 handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_n_points, lbp_radius, compute_sift,
                                      compute_hog, compute_hist, compute_lbp)
-
 # Train model
 handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)

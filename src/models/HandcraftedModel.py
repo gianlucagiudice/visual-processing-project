@@ -58,6 +58,8 @@ class HandcraftedModel(MyModel):
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
         self.time = datetime.now()
 
+        kmeans = None
+        k = 0
         if self.compute_sift:
             # sift extraction (knn)
             dic = self.extract_sift_dictionary(x_train)
@@ -186,8 +188,8 @@ class HandcraftedModel(MyModel):
         print('Extracting dataset features ...')
         with tqdm(total=len(X)) as pbar:
             for x in X:
-                x = self.enhancement.equalize_histogram(x)
-                x = self.enhancement.bilateral_filter(x)
+                x = self.enhancement.equalize_histogram(np.uint8(x * 255))
+                x = self.enhancement.bilateral_filter(np.uint8(x * 255))
                 features = self.extract_features(x, compute_sift, compute_hog, compute_hist, compute_lbp, kmeans_sift, k)
                 df = df.append(features, ignore_index=True)
                 pbar.update(1)
