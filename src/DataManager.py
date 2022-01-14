@@ -1,7 +1,5 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
-
 import cv2
 from tqdm import tqdm
 
@@ -18,6 +16,7 @@ import math
 def read_dataset_metadata(dataset_path: str, metadata_filename: str):
     df = pd.read_pickle(join(dataset_path, metadata_filename))
     df['path'] = df['full_path'].apply(lambda x: join(dataset_path, x))
+    df['gender'] = df['gender'].astype(int)
     return df
 
 
@@ -107,7 +106,6 @@ def remove_invalid_images(dataset, path, smallest_dim):
     return dataset
 
 
-
 class DataManager:
     X = ['path']
     y = ['gender', 'age']
@@ -145,27 +143,28 @@ class DataManager:
         train, validation = train_test_split(train, test_size=self.validation)
         return train, validation, test
 
-    def read_images(self, files):
+    def read_images(self, files, crop=False):
         shape = (files.size, *self.resize_shape)
         images = np.empty(shape)
         # Start reading of the images
         with tqdm(total=files.size) as pbar:
             for i, image in enumerate(files):
                 # Append image
-                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images)
+                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images, crop=crop)
                 # Update progress bar
                 pbar.update(1)
 
         return images
 
     @staticmethod
-    def read_image(image, resize_shape, normalize, ):
+    def read_image(image, resize_shape, normalize, crop):
         # Read image
         im = cv2.imread(image)
         # Change color space
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         # Remove padding
-        im = DataManager.crop_image(im)
+        if crop:
+            im = DataManager.crop_image(im)
         # Resize image
         im = cv2.resize(im, (resize_shape[0], resize_shape[1]))
         # Normalize image
@@ -195,13 +194,6 @@ class DataManager:
     @staticmethod
     def get_y(df):
         return df[DataManager.y]
-
-    def filter_invalid_image(self):
-        # TODO: Filter the images with padding
-        '''
-        Se un'immagine ha il "contorno" replicato bisogna toglierla perchè non è un'immagine valida.
-        '''
-        pass
 
     def standardize_age(self, dataset, scaler):
         x = np.expand_dims(dataset['age'], -1)
