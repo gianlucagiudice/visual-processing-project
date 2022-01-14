@@ -10,6 +10,7 @@ import pandas as pd
 import seaborn as sns
 from skimage import feature, color
 from skimage.feature import hog
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.svm import SVC
@@ -41,6 +42,7 @@ class HandcraftedModel(MyModel):
         self.compute_lbp = compute_lbp
         self.enhancement = EnhancementUtils()
 
+        self.time = 0
         self.clf = None
         self.regressor = None
 
@@ -54,17 +56,22 @@ class HandcraftedModel(MyModel):
         return gender_pred, age_pred
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
+        self.time = datetime.now()
+
+        if self.compute_sift:
+            # sift extraction (knn)
+            dic = self.extract_sift_dictionary(x_train)
+            k = 150
+            batch_size = 200
+            kmeans = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, verbose=1).fit(dic)
 
         # features extraction
         df_train = self.extract_dataset_features(x_train, y_train, self.compute_sift, self.compute_hog,
-                                                 self.compute_hist,
-                                                 self.compute_lbp)
+                                                 self.compute_hist, self.compute_lbp, kmeans, k)
         df_val = self.extract_dataset_features(x_val, y_val, self.compute_sift, self.compute_hog, self.compute_hist,
-                                               self.compute_lbp)
+                                               self.compute_lbp, kmeans, k)
         df_test = self.extract_dataset_features(x_test, y_test, self.compute_sift, self.compute_hog, self.compute_hist,
-                                                self.compute_lbp)
-
-        self.data_manager.delete_nan_columns(df_train, df_val, df_test)
+                                                self.compute_lbp, kmeans, k)
 
         # train
         # classificator
@@ -103,6 +110,11 @@ class HandcraftedModel(MyModel):
         return pickle_clf, pickle_regressor
 
     def evaluate(self, df):
+        f = open('evaluation_handcrafted.txt', 'a')
+        line = 'HC;' + str(self.n_sift) + ';' + str(self.color_hist_bins) + ';' + str(self.lbp_n_points) + ';' + str(
+            self.lbp_radius) + ';' + str(int(self.compute_sift)) + ';' + str(int(self.compute_hog)) + ';' + str(
+            int(self.compute_hist)) + ';' + str(int(self.compute_lbp)) + ';'
+
         print('Evaluation of gender classification')
         preds = self.clf.predict(df.drop(columns=["age", "gender"], axis=1))
         acc = accuracy_score(df["gender"], preds)
@@ -116,19 +128,59 @@ class HandcraftedModel(MyModel):
         age = self.data_manager.inverse_standardize_age([df["age"]])[0]
         age_preds = self.data_manager.inverse_standardize_age([preds])[0]
 
-        print('Mean squared error: ' + str(mean_squared_error(age, age_preds)))
-        print('Root mean squared error: ' + str(math.sqrt(mean_squared_error(age, age_preds))))
-        print('Mean absolute error: ' + str(mean_absolute_error(age, age_preds)))
+        mse = mean_squared_error(age, age_preds)
+        rmse = math.sqrt(mean_squared_error(age, age_preds))
+        mae = mean_absolute_error(age, age_preds)
+        print('Mean squared error: ' + str(mse))
+        print('Root mean squared error: ' + str(rmse))
+        print('Mean absolute error: ' + str(mae))
 
         age_val = [math.floor(a) for a in age]
         age_preds_val = [math.floor(a) for a in age_preds]
 
-        conf_mat_val = confusion_matrix(age_val, age_preds_val)
+        #conf_mat_val = confusion_matrix(age_val, age_preds_val)
 
-        sns.heatmap(conf_mat_val, linewidth=0.5)
+        #sns.heatmap(conf_mat_val, linewidth=0.5)
+        plt.scatter(age_val, age_preds_val)
         plt.show()
 
-    def extract_dataset_features(self, X, y, compute_sift, compute_hog, compute_hist, compute_lbp):
+        # accuracy on 4 classes (10-18 teenager, 18-35 young adult, 35-55 adult, 60-100 old)
+        classes_val = []
+        classes_preds = []
+
+        for a in age_val:
+            if 0 < a <= 18:
+                classes_val.append(0)
+            elif 18 < a <= 35:
+                classes_val.append(1)
+            elif 35 < a <= 55:
+                classes_val.append(2)
+            else:
+                classes_val.append(3)
+        for a in age_preds_val:
+            if 0 < a <= 18:
+                classes_preds.append(0)
+            elif 18 < a <= 35:
+                classes_preds.append(1)
+            elif 35 < a <= 55:
+                classes_preds.append(2)
+            else:
+                classes_preds.append(3)
+
+        conf_mat_classes = confusion_matrix(classes_val, classes_preds)
+
+        sns.heatmap(conf_mat_classes, linewidth=0.5)
+        plt.show()
+
+        line = line + str(acc) + ';' + str(mse) + ';' + str(rmse) + ';' + str(mae)
+
+        finish_time = datetime.now()
+        delta_time = finish_time - self.time
+        line = line + ';' + str(delta_time)
+
+        f.write(line + '\n')
+
+    def extract_dataset_features(self, X, y, compute_sift, compute_hog, compute_hist, compute_lbp, kmeans_sift, k):
         df = pd.DataFrame()
 
         print('Extracting dataset features ...')
@@ -136,7 +188,7 @@ class HandcraftedModel(MyModel):
             for x in X:
                 x = self.enhancement.equalize_histogram(x)
                 x = self.enhancement.bilateral_filter(x)
-                features = self.extract_features(x, compute_sift, compute_hog, compute_hist, compute_lbp)
+                features = self.extract_features(x, compute_sift, compute_hog, compute_hist, compute_lbp, kmeans_sift, k)
                 df = df.append(features, ignore_index=True)
                 pbar.update(1)
 
@@ -145,7 +197,7 @@ class HandcraftedModel(MyModel):
 
         return df
 
-    def extract_features(self, img, compute_sift, compute_hog, compute_hist, compute_lbp):
+    def extract_features(self, img, compute_sift, compute_hog, compute_hist, compute_lbp, kmeans_sift, k):
         # to grey
         grey = color.rgb2gray(img)
         # division in 4 parts of original img
@@ -161,18 +213,23 @@ class HandcraftedModel(MyModel):
 
         if compute_sift:
             # SIFT - on the entire face
-            _, descriptors = self.extract_sift(grey, self.n_sift)
-            img_sift = [d.tolist() for d in descriptors]
-            for s in img_sift:
-                for el in s:
-                    df[i] = el
-                    i = i + 1
+            kp, descriptors = self.extract_sift(grey, self.n_sift)
+            histo = np.zeros(k)
+            nkp = np.size(kp)
+            for d in descriptors:
+                idx = kmeans_sift.predict([d])
+                histo[idx] += 1 / nkp
+
+            for h in histo:
+                df['sift_' + str(i)] = h
+                i = i + 1
+
 
         if compute_hog:
             # HOG - on the entire face
             img_hog = self.extract_hog(img)
             for h in img_hog:
-                df[i] = h
+                df['hog_' + str(i)] = h
                 i = i + 1
 
         if compute_hist:
@@ -182,13 +239,13 @@ class HandcraftedModel(MyModel):
                 img_color_hist.extend(self.color_histogram(part, self.color_hist_bins))
             for h in img_color_hist:
                 for el in h:
-                    df[i] = el
+                    df['hist_' + str(i)] = el
                     i = i + 1
 
         if compute_lbp:
             img_lbp = self.extract_lbp(grey, self.lbp_n_points, self.lbp_radius)
             for h in img_lbp:
-                df[i] = h
+                df['lbp_' + str(i)] = h
                 i = i + 1
 
         features = pd.DataFrame()
@@ -246,6 +303,17 @@ class HandcraftedModel(MyModel):
             histograms[i] = [x / sum(histograms[i]) for x in histograms[i]]
 
         return histograms
+
+    def extract_sift_dictionary(self, dataset):
+        d = []
+        print('Creating the dictionary for SIFT features ...')
+        for img in dataset:
+            grey = color.rgb2gray(img)
+            _, descriptors = self.extract_sift(grey, self.n_sift)
+            img_sift = [d.tolist() for d in descriptors]
+            for s in img_sift:
+                d.append(s)
+        return d
 
     @staticmethod
     def extract_sift(img, n_sift):

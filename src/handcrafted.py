@@ -21,7 +21,13 @@ X_val, y_val = data_manager.get_X(validation), data_manager.get_y(validation)
 print('Read test images ...')
 X_test, y_test = data_manager.get_X(test), data_manager.get_y(test)
 
+f = open('evaluation_handcrafted.txt', 'a')
+line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST;COMPUTELBP;' + \
+       'ACCCLF;MSEREG;RMSEREG;MAEREG;TIME'
+f.write(line + '\n')
+
 # Define the model
+print('SIFT')
 n_sift = 50
 color_hist_bins = 128
 lbp_n_points = 24
@@ -35,37 +41,3 @@ handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_
 
 # Train model
 handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)
-
-
-# sift
-
-# hog
-
-# hist
-
-# lbp
-
-# sift + hog
-
-# sift + hist
-
-# sift + lbp
-
-# hog + hist
-
-# hog + lbp
-
-# hist + lbp
-
-# sift + hog + hist
-
-# sift + hist + lbp
-
-# sift + hog + lbp
-
-# hog + hist + lbp
-
-# sift + hog + hist + lbp
-
-
-
