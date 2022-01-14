@@ -1,14 +1,25 @@
+import os.path
 
+import numpy as np
 import telepot
 from telepot.loop import MessageLoop
 from pprint import pprint
 import time
 import cv2
+from PIL import Image
+
+import keras
+import tensorflow as tf
+
 
 from src.EnhancementUtils import EnhancementUtils
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
+from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
+
 
 TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
+
+#TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
 
 FACES = []
 step = 0
@@ -46,6 +57,9 @@ def on_chat_message(msg):
             bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
             FACES = cascade_face_detector.detect_image(img_rescaled)
+            #FACES = yolo_face_detector.detect_image(Image.fromarray(img_rescaled)) <-- NON FUNZIONA
+            #print(FACES)
+
             num_faces_found = len(FACES)
 
             print(f'Num faces found', num_faces_found)
@@ -67,9 +81,11 @@ def on_chat_message(msg):
                 if num_faces_found == 1:
                     bot.sendMessage(chat_id, 'Nella foto è stato individuato un volto! Desideri confermare?\n/Conferma\n/Annulla')
                     step = 1
+                    print(f'Step: {step}')
                 elif num_faces_found > 1:
                     bot.sendMessage(chat_id, 'Nella foto è stato individuato più di un volto! Quale desideri utilizzare?\n(inserisci il numero del volto scelto)\n/Annulla')
                     step = 2
+                    print(f'Step: {step}')
             else:
                 bot.sendMessage(chat_id, 'Nella foto non sono stati rilevati volti, inviare una nuova foto')
 
@@ -87,18 +103,18 @@ def on_chat_message(msg):
 
                 cropped_img = img[y:y + h, x:x + w]
 
-                # TODO : perform prediction of age and gender from cropped_img
-                #  predicted_age = predict_age(cropped_img)
-                #  predicted_gender = predict_gender(cropped_img)
+                # Predizioni con la rete
+                predicted_age, predicted_gender = make_vgg_predictions(gender_vgg_model, age_vgg_model, cropped_img)
 
-                predicted_age = 60
-                predicted_gender = 1
+                print(f'Genere predetto: {predicted_gender}')
+                print(f'Età esatta predetta: {predicted_age}')
 
-                gender_dict = {1: 'Maschio',
-                               0: 'Femmina'}
+                gender_dict = {0: 'Maschio',
+                               1: 'Femmina'}
 
-                bot.sendMessage(chat_id, 'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: ' + str(
-                    predicted_age))
+                bot.sendMessage(chat_id,
+                                'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: [' + str(
+                                    predicted_age - 5) + ';' + str(predicted_age + 5))
 
                 # TODO : perform retrieval of most similar celebrity
                 #  celeb_name,celeb_image_path = retrieve_similar_celeb(cropped_img)
@@ -110,10 +126,12 @@ def on_chat_message(msg):
                               caption='Caspita! Assomigli proprio a ' + celeb_name)
 
                 step = 0
+                print(f'Step: {step}')
 
             elif txt == '/Annulla':
                 FACES = []
                 step = 0
+                print(f'Step: {step}')
             else:
                 bot.sendMessage(chat_id, 'Input non valido, riprovare.\n/Conferma\n/Annulla')
 
@@ -125,6 +143,7 @@ def on_chat_message(msg):
             if txt == '/Annulla':
                 FACES = []
                 step = 0
+                print(f'Step: {step}')
             elif txt.isnumeric():
                 idx = int(txt) - 1
                 if idx <= len(FACES):
@@ -135,40 +154,74 @@ def on_chat_message(msg):
 
                     cropped_img = img[y:y+h, x:x+w]
 
-                    # TODO : perform prediction of age and gender from cropped_img
-                    #  predicted_age = predict_age(cropped_img)
-                    #  predicted_gender = predict_gender(cropped_img)
+                    # Predizioni con la rete
+                    predicted_age, predicted_gender = make_vgg_predictions(gender_vgg_model,age_vgg_model,cropped_img)
 
-                    predicted_age = 60
-                    predicted_gender = 1
 
-                    gender_dict = {1: 'Maschio',
-                                   0: 'Femmina'}
+                    print(f'Genere predetto: {predicted_gender}')
+                    print(f'Età esatta predetta: {predicted_age}')
+
+
+                    gender_dict = {0: 'Maschio',
+                                   1: 'Femmina'}
 
                     bot.sendMessage(chat_id,
-                                    'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: ' + str(
-                                        predicted_age))
+                                    'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: [' + str(
+                                        predicted_age-5) + ';' + str(predicted_age+5))
 
                     # TODO : perform retrieval of most similar celebrity
                     #  celeb_name,celeb_image_path = retrieve_similar_celeb(cropped_img)
-
+                    '''
                     celeb_name = 'Johnny Sins'
                     celeb_image_path = 'Johnny Sins.jpg'
 
                     bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
                                   caption='Caspita! Assomigli proprio a ' + celeb_name)
-
+                    '''
                     step = 0
+                    print(f'Step: {step}')
 
             else:
                 bot.sendMessage(chat_id, 'Input non valido, riprovare.\n(inserisci il numero del volto scelto)\n/Annulla')
+
+def make_vgg_predictions(model_gender, model_age, img):
+    SCALER = 116
+
+    img = cv2.resize(img, (224,224))
+    img = img.astype('float32')
+    img /= 255.0
+
+    # NON FUNZIONANO:
+    with graph.as_default():
+        prediction_gender = model_gender.predict(np.expand_dims(img, axis=0))
+        prediction_gender = np.argmax(prediction_gender)
+
+    prediction_age = model_age.predict(np.expand_dims(img, axis=0))
+    prediction_age = round(float(prediction_age*SCALER))
+
+    return prediction_gender, prediction_age
 
 
 bot = telepot.Bot(TOKEN)
 bot.message_loop(on_chat_message)
 print('Listening ...')
-cascade_face_detector = CascadeFaceDetector()
 
+# Loading detector
+cascade_face_detector = CascadeFaceDetector()
+yolo_face_detector = YoloFaceDetector()
+
+keras.backend.clear_session()
+
+gender_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_gender_best.h5'))
+age_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_age_best.h5'))
+
+gender_vgg_model._make_predict_function()
+age_vgg_model._make_predict_function()
+
+global graph
+graph = tf.compat.v1.get_default_graph()
+
+print(f'Step: {0}')
 
 while 1:
     time.sleep(10)
