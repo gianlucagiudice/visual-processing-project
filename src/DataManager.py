@@ -1,6 +1,7 @@
 import numpy as np
 
 import cv2
+from numba import jit
 from tqdm import tqdm
 
 from sklearn.preprocessing import MinMaxScaler
@@ -69,22 +70,24 @@ def remove_invalid_rows(dataset):
     return dataset
 
 
-def are_rows_equal(rows):
-    for i in range(1, len(rows)):
-        if (rows[i - 1] == rows[i]).all():
-            return True
-    return False
+def are_rows_equal(rows, th=.95):
+    r, c, d = rows.shape
+    flattened = np.reshape(rows, (r, c*d))
+    return ((flattened == flattened[0]).sum()) / flattened.size > th
 
 
 def is_image_padded(img, number_equal_rows=5):
     nr = number_equal_rows
     return any([
-        are_rows_equal(img[:nr, :, :]), are_rows_equal(img[-nr:, :, :]),
-        are_rows_equal(img.T[:nr, :, :]), are_rows_equal(img.T[-nr:, :, :])
+        are_rows_equal(img[:nr]), # Top
+        are_rows_equal(np.flipud(img)[:nr]), # Bottom
+        are_rows_equal(np.transpose(img, (1,0,2))[:nr]), # Left
+        are_rows_equal(np.flipud(np.transpose(img, (1,0,2)))[:nr]) # Right
     ])
 
 
-def is_image_too_little(img, smallest_dim):
+@jit(nopython=True)
+def is_image_too_little(img, smallest_dim=224):
     return img.shape[0] <= smallest_dim or img.shape[1] <= smallest_dim
 
 
