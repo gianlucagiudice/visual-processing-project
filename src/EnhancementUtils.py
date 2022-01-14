@@ -24,6 +24,12 @@ class EnhancementUtils:
         bilateral = cv2.bilateralFilter(img, d=d, sigmaColor=sigmaColor, sigmaSpace=sigmaSpace)
         return bilateral / 255
 
+    def is_image_too_dark(self, img, thresh=0.5):
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        _, _, v = cv2.split(hsv)
+
+        return int(np.average(v.flatten())) / 255 < thresh
+
     def automatic_gamma(self, img):
         # convert img to gray
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

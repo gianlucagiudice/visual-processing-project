@@ -5,6 +5,7 @@ from pprint import pprint
 import time
 import cv2
 
+from src.EnhancementUtils import EnhancementUtils
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
 
 TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
@@ -37,6 +38,10 @@ def on_chat_message(msg):
 
             #img_rescaled = cv2.resize(img, dim)
             img_rescaled = img
+
+            utils = EnhancementUtils()
+            if utils.is_image_too_dark(img):
+                img_rescaled = utils.automatic_gamma(img_rescaled)
 
             bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
