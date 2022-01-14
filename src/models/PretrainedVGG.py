@@ -110,7 +110,7 @@ class PretrainedVGG(MyModel):
                                  epochs=EPOCHS)
 
         # Dump history dictinary
-        with open(join(self.checkpoint_dir, 'from_scratch_training_history.pickle'), 'wb') as handle:
+        with open(join(self.checkpoint_dir, 'pretrained_vgg.pickle'), 'wb') as handle:
             pickle.dump(history, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         # Load best weights
@@ -129,7 +129,7 @@ class PretrainedVGG(MyModel):
         results = self.model.evaluate(x=x_test,
                                       y={'gender_output': y_test['gender'], 'age_output': y_test['age']})
         # Dump evaluation result
-        with open(join(self.checkpoint_dir, 'from_scratch_evaluation.pickle'), 'wb') as handle:
+        with open(join(self.checkpoint_dir, 'pretrained_vgg.pickle'), 'wb') as handle:
             pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     def save_plot_network(self):
