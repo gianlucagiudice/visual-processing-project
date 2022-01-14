@@ -1,8 +1,7 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
-
 import cv2
+from numba import jit
 from tqdm import tqdm
 
 from sklearn.preprocessing import MinMaxScaler
@@ -18,6 +17,7 @@ import math
 def read_dataset_metadata(dataset_path: str, metadata_filename: str):
     df = pd.read_pickle(join(dataset_path, metadata_filename))
     df['path'] = df['full_path'].apply(lambda x: join(dataset_path, x))
+    df['gender'] = df['gender'].astype(int)
     return df
 
 
@@ -70,22 +70,24 @@ def remove_invalid_rows(dataset):
     return dataset
 
 
-def are_rows_equal(rows):
-    for i in range(1, len(rows)):
-        if (rows[i - 1] == rows[i]).all():
-            return True
-    return False
+def are_rows_equal(rows, th=.95):
+    r, c, d = rows.shape
+    flattened = np.reshape(rows, (r, c*d))
+    return ((flattened == flattened[0]).sum()) / flattened.size > th
 
 
 def is_image_padded(img, number_equal_rows=5):
     nr = number_equal_rows
     return any([
-        are_rows_equal(img[:nr, :, :]), are_rows_equal(img[-nr:, :, :]),
-        are_rows_equal(img.T[:nr, :, :]), are_rows_equal(img.T[-nr:, :, :])
+        are_rows_equal(img[:nr]), # Top
+        are_rows_equal(np.flipud(img)[:nr]), # Bottom
+        are_rows_equal(np.transpose(img, (1,0,2))[:nr]), # Left
+        are_rows_equal(np.flipud(np.transpose(img, (1,0,2)))[:nr]) # Right
     ])
 
 
-def is_image_too_little(img, smallest_dim):
+@jit(nopython=True)
+def is_image_too_little(img, smallest_dim=224):
     return img.shape[0] <= smallest_dim or img.shape[1] <= smallest_dim
 
 
@@ -105,7 +107,6 @@ def remove_invalid_images(dataset, path, smallest_dim):
     print(f'Invalid rows: {(1 - len_after / len_before) * 100:.3f}%')
 
     return dataset
-
 
 
 class DataManager:
@@ -145,27 +146,28 @@ class DataManager:
         train, validation = train_test_split(train, test_size=self.validation)
         return train, validation, test
 
-    def read_images(self, files):
+    def read_images(self, files, crop=False):
         shape = (files.size, *self.resize_shape)
         images = np.empty(shape)
         # Start reading of the images
         with tqdm(total=files.size) as pbar:
             for i, image in enumerate(files):
                 # Append image
-                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images)
+                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images, crop=crop)
                 # Update progress bar
                 pbar.update(1)
 
         return images
 
     @staticmethod
-    def read_image(image, resize_shape, normalize, ):
+    def read_image(image, resize_shape, normalize, crop):
         # Read image
         im = cv2.imread(image)
         # Change color space
         im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
         # Remove padding
-        im = DataManager.crop_image(im)
+        if crop:
+            im = DataManager.crop_image(im)
         # Resize image
         im = cv2.resize(im, (resize_shape[0], resize_shape[1]))
         # Normalize image
@@ -195,13 +197,6 @@ class DataManager:
     @staticmethod
     def get_y(df):
         return df[DataManager.y]
-
-    def filter_invalid_image(self):
-        # TODO: Filter the images with padding
-        '''
-        Se un'immagine ha il "contorno" replicato bisogna toglierla perchè non è un'immagine valida.
-        '''
-        pass
 
     def standardize_age(self, dataset, scaler):
         x = np.expand_dims(dataset['age'], -1)

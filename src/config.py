@@ -9,6 +9,12 @@ IMBD_CROPPED_METADATA_FILENAME = 'imdb.pickle'
 UTK_PATH = '../dataset/utk'
 UTK_METADATA_FILENAME = 'utk.pickle'
 
+UTK_CROPPED_PATH = '../dataset/utk/crop_part1'
+UTK_CROPPED_METADATA_FILENAME = '../utk.pickle'
+
+FULL_UTK_CROPPED_PATH = '../dataset/utk/images'
+FULL_UTK_CROPPED_METADATA_FILENAME = '../utk_full.pickle'
+
 # Image folder
 OUTPUT_IMAGE_FOLDER = join('..', 'doc', 'images')
 
