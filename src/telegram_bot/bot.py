@@ -52,7 +52,9 @@ def on_chat_message(msg):
 
             utils = EnhancementUtils()
             if utils.is_image_too_dark(img):
+                img_rescaled = utils.equalize_histogram(np.uint8(img_rescaled * 255))
                 img_rescaled = utils.automatic_gamma(img_rescaled)
+                img_rescaled = utils.adaptive_gamma(img_rescaled)
 
             bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
