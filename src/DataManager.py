@@ -18,7 +18,6 @@ import math
 def read_dataset_metadata(dataset_path: str, metadata_filename: str):
     df = pd.read_pickle(join(dataset_path, metadata_filename))
     df['path'] = df['full_path'].apply(lambda x: join(dataset_path, x))
-    df = delete_nan_label_rows(df)
     return df
 
 
@@ -46,6 +45,67 @@ def sample_n(dataset, n_subset):
         n_sample = len(dataset)
     # Return sampled sampled
     return dataset.head(math.floor(n_sample))
+
+
+def reorder_columns(dataset, head):
+    columns = dataset.columns.tolist()
+    tail = set(columns) - set(head)
+    ordered_columns = head + list(tail)
+    # Ordered columns
+    df = dataset[ordered_columns]
+
+    return df
+
+
+def remove_invalid_rows(dataset):
+    len_before = len(dataset)
+    print('Len before: ', len_before)
+    dataset = dataset.query('age<=100')
+    dataset = dataset[dataset.gender.notna()]
+    dataset = dataset[dataset.age.notna()]
+    len_after = len(dataset)
+    print('Len after: ', len_after)
+    print(f'Invalid rows: {(1 - len_after / len_before) * 100:.3f}%')
+
+    return dataset
+
+
+def are_rows_equal(rows):
+    for i in range(1, len(rows)):
+        if (rows[i - 1] == rows[i]).all():
+            return True
+    return False
+
+
+def is_image_padded(img, number_equal_rows=5):
+    nr = number_equal_rows
+    return any([
+        are_rows_equal(img[:nr, :, :]), are_rows_equal(img[-nr:, :, :]),
+        are_rows_equal(img.T[:nr, :, :]), are_rows_equal(img.T[-nr:, :, :])
+    ])
+
+
+def is_image_too_little(img, smallest_dim):
+    return img.shape[0] <= smallest_dim or img.shape[1] <= smallest_dim
+
+
+def remove_invalid_images(dataset, path, smallest_dim):
+    len_before = len(dataset)
+    print('Len before: ', len_before)
+
+    with tqdm(total=dataset.shape[0]) as pbar:
+        for index, row in dataset.iterrows():
+            img = cv2.imread(path + row.full_path)
+            if is_image_too_little(img, smallest_dim=smallest_dim) or is_image_padded(img):
+                dataset.drop(index, inplace=True)
+            pbar.update(1)
+
+    len_after = len(dataset)
+    print('Len after: ', len_after)
+    print(f'Invalid rows: {(1 - len_after / len_before) * 100:.3f}%')
+
+    return dataset
+
 
 
 class DataManager:
@@ -91,26 +151,31 @@ class DataManager:
         # Start reading of the images
         with tqdm(total=files.size) as pbar:
             for i, image in enumerate(files):
-                # Read image
-                im = cv2.imread(image)
-                # Change color space
-                im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-                # Remove padding
-                im = self.crop_image(im)
-                # Resize image
-                im = cv2.resize(im, (self.resize_shape[0], self.resize_shape[1]))
-                # Normalize image
-                if self.normalize_images:
-                    im = im / 255
-                    im = im.astype(np.float32)
                 # Append image
-                images[i] = im
+                images[i] = self.read_image(image, self.resize_shape, normalize=self.normalize_images)
                 # Update progress bar
                 pbar.update(1)
 
         return images
 
-    def crop_image(self, im, padding=PADDING):
+    @staticmethod
+    def read_image(image, resize_shape, normalize, ):
+        # Read image
+        im = cv2.imread(image)
+        # Change color space
+        im = cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
+        # Remove padding
+        im = DataManager.crop_image(im)
+        # Resize image
+        im = cv2.resize(im, (resize_shape[0], resize_shape[1]))
+        # Normalize image
+        if normalize:
+            im = im / 255
+            im = im.astype(np.float32)
+        return im
+
+    @staticmethod
+    def crop_image(im, padding=PADDING):
         height, width, _ = im.shape
         ratio = 1 / (1 + padding)
 
