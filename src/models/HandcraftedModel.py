@@ -45,11 +45,12 @@ class HandcraftedModel(MyModel):
         self.time = 0
         self.clf = None
         self.regressor = None
+        self.kmeans = None
 
     def predict(self, image: np.array) -> (bool, int):
-        clf, regressor = self.load_weights()
+        clf, regressor, kmeans = self.load_weights()
         features = self.extract_features(image, self.compute_sift, self.compute_hog, self.compute_hist,
-                                         self.compute_lbp)
+                                         self.compute_lbp, kmeans, kmeans.n_clusters)
         gender_pred = clf.predict(features)
         age_pred = regressor.predict(features)
 
@@ -65,15 +66,17 @@ class HandcraftedModel(MyModel):
             dic = self.extract_sift_dictionary(x_train)
             k = 150
             batch_size = 200
-            kmeans = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, verbose=1).fit(dic)
+            self.kmeans = MiniBatchKMeans(n_clusters=k, batch_size=batch_size, verbose=1).fit(dic)
 
         # features extraction
         df_train = self.extract_dataset_features(x_train, y_train, self.compute_sift, self.compute_hog,
-                                                 self.compute_hist, self.compute_lbp, kmeans, k)
+                                                 self.compute_hist, self.compute_lbp, self.kmeans, k)
         df_val = self.extract_dataset_features(x_val, y_val, self.compute_sift, self.compute_hog, self.compute_hist,
-                                               self.compute_lbp, kmeans, k)
+                                               self.compute_lbp, self.kmeans, k)
         df_test = self.extract_dataset_features(x_test, y_test, self.compute_sift, self.compute_hog, self.compute_hist,
-                                                self.compute_lbp, kmeans, k)
+                                                self.compute_lbp, self.kmeans, k)
+        frames = [df_val, df_test]
+        df_val = pd.concat(frames)
 
         # train
         # classificator
@@ -101,15 +104,22 @@ class HandcraftedModel(MyModel):
         with open(pkl_filename_reg, 'wb') as file:
             pickle.dump(self.regressor, file)
 
+        pkl_filename_kmeans = "handcrafted_kmeans.pkl"
+        with open(pkl_filename_kmeans, 'wb') as file:
+            pickle.dump(self.kmeans, file)
+
     def load_weights(self):
-        pkl_filename_clf = "handcrafted_clf.pkl"
+        pkl_filename_clf = "../src/handcrafted_clf.pkl"
         with open(pkl_filename_clf, 'rb') as file:
             pickle_clf = pickle.load(file)
-        pkl_filename_reg = "handcrafted_regressor.pkl"
+        pkl_filename_reg = "../src/handcrafted_regressor.pkl"
         with open(pkl_filename_reg, 'rb') as file:
             pickle_regressor = pickle.load(file)
+        pkl_filename_kmeans = "../src/handcrafted_kmeans.pkl"
+        with open(pkl_filename_kmeans, 'rb') as file:
+            pickle_kmeans = pickle.load(file)
 
-        return pickle_clf, pickle_regressor
+        return pickle_clf, pickle_regressor, pickle_kmeans
 
     def evaluate(self, df):
         f = open('evaluation_handcrafted.txt', 'a')
