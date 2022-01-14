@@ -1,12 +1,19 @@
 import math
+import pickle
 from datetime import datetime
 from os.path import join
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from skimage import feature, color
 from skimage.feature import hog
+from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeRegressor
 from tqdm import tqdm
 
 from src.EnhancementUtils import EnhancementUtils
@@ -20,40 +27,108 @@ class HandcraftedModel(MyModel):
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
     log_dir = join(LOG_DIR, 'fit', 'handcrafted/') + datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    def __init__(self, n_sift, color_hist_bins, lbp_n_points, lbp_radius, input_size=IMAGE_INPUT_SIZE):
+    def __init__(self, data_manager, n_sift, color_hist_bins, lbp_n_points, lbp_radius, compute_sift=True,
+                 compute_hog=True, compute_hist=True, compute_lbp=True, input_size=IMAGE_INPUT_SIZE):
         super().__init__(input_size)
+        self.data_manager = data_manager
         self.n_sift = n_sift
         self.color_hist_bins = color_hist_bins
         self.lbp_n_points = lbp_n_points
         self.lbp_radius = lbp_radius
+        self.compute_sift = compute_sift
+        self.compute_hog = compute_hog
+        self.compute_hist = compute_hist
+        self.compute_lbp = compute_lbp
         self.enhancement = EnhancementUtils()
 
+        self.clf = None
+        self.regressor = None
+
     def predict(self, image: np.array) -> (bool, int):
-        pass
+        clf, regressor = self.load_weights()
+        features = self.extract_features(image, self.compute_sift, self.compute_hog, self.compute_hist,
+                                         self.compute_lbp)
+        gender_pred = clf.predict(features)
+        age_pred = regressor.predict(features)
+
+        return gender_pred, age_pred
 
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
 
-        # features
-        self.load_features()
+        # features extraction
+        df_train = self.extract_dataset_features(x_train, y_train, self.compute_sift, self.compute_hog,
+                                                 self.compute_hist,
+                                                 self.compute_lbp)
+        df_val = self.extract_dataset_features(x_val, y_val, self.compute_sift, self.compute_hog, self.compute_hist,
+                                               self.compute_lbp)
+        df_test = self.extract_dataset_features(x_test, y_test, self.compute_sift, self.compute_hog, self.compute_hist,
+                                                self.compute_lbp)
+
+        self.data_manager.delete_nan_columns(df_train, df_val, df_test)
 
         # train
+        # classificator
+        print('Training classificator ...')
+        self.clf = SVC()
+        self.clf.fit(df_train.drop(columns=["age", "gender"], axis=1), df_train["gender"])
+        # regressor
+        print('Training regressor ...')
+        self.regressor = DecisionTreeRegressor(random_state=0)
+        self.regressor.fit(df_train.drop(columns=["age", "gender"], axis=1), df_train["age"])
 
         # evaluate the model
+        print('Evaluating the models ...')
+        self.evaluate(df_val)
 
-        pass
+        # save the model
+        self.save_weights()
 
     def save_weights(self) -> None:
-        # Save the weights of the model
-        pass
+        pkl_filename_clf = "handcrafted_clf.pkl"
+        with open(pkl_filename_clf, 'wb') as file:
+            pickle.dump(self.clf, file)
+
+        pkl_filename_reg = "handcrafted_regressor.pkl"
+        with open(pkl_filename_reg, 'wb') as file:
+            pickle.dump(self.regressor, file)
 
     def load_weights(self):
-        # Load the weights of the model
-        pass
+        pkl_filename_clf = "handcrafted_clf.pkl"
+        with open(pkl_filename_clf, 'rb') as file:
+            pickle_clf = pickle.load(file)
+        pkl_filename_reg = "handcrafted_regressor.pkl"
+        with open(pkl_filename_reg, 'rb') as file:
+            pickle_regressor = pickle.load(file)
 
-    def load_features(self):
-        pass
+        return pickle_clf, pickle_regressor
 
-    def extract_dataset_features(self, X, y, compute_sift=True, compute_hog=True, compute_hist=True, compute_lbp=True):
+    def evaluate(self, df):
+        print('Evaluation of gender classification')
+        preds = self.clf.predict(df.drop(columns=["age", "gender"], axis=1))
+        acc = accuracy_score(df["gender"], preds)
+        conf_mat = confusion_matrix(df["gender"], preds)
+        print('Accuracy: ' + str(acc))
+        sns.heatmap(conf_mat, linewidth=0.5)
+        plt.show()
+
+        print('Evaluation of age regression')
+        preds = self.regressor.predict(df.drop(columns=["age", "gender"], axis=1))
+        age = self.data_manager.inverse_standardize_age([df["age"]])[0]
+        age_preds = self.data_manager.inverse_standardize_age([preds])[0]
+
+        print('Mean squared error: ' + str(mean_squared_error(age, age_preds)))
+        print('Root mean squared error: ' + str(math.sqrt(mean_squared_error(age, age_preds))))
+        print('Mean absolute error: ' + str(mean_absolute_error(age, age_preds)))
+
+        age_val = [math.floor(a) for a in age]
+        age_preds_val = [math.floor(a) for a in age_preds]
+
+        conf_mat_val = confusion_matrix(age_val, age_preds_val)
+
+        sns.heatmap(conf_mat_val, linewidth=0.5)
+        plt.show()
+
+    def extract_dataset_features(self, X, y, compute_sift, compute_hog, compute_hist, compute_lbp):
         df = pd.DataFrame()
 
         print('Extracting dataset features ...')
@@ -70,7 +145,7 @@ class HandcraftedModel(MyModel):
 
         return df
 
-    def extract_features(self, img, compute_sift=True, compute_hog=True, compute_hist=True, compute_lbp=True):
+    def extract_features(self, img, compute_sift, compute_hog, compute_hist, compute_lbp):
         # to grey
         grey = color.rgb2gray(img)
         # division in 4 parts of original img
@@ -111,7 +186,7 @@ class HandcraftedModel(MyModel):
                     i = i + 1
 
         if compute_lbp:
-            img_lbp = self.compute_lbp(grey, self.lbp_n_points, self.lbp_radius)
+            img_lbp = self.extract_lbp(grey, self.lbp_n_points, self.lbp_radius)
             for h in img_lbp:
                 df[i] = h
                 i = i + 1
@@ -141,7 +216,7 @@ class HandcraftedModel(MyModel):
         return parts
 
     @staticmethod
-    def compute_lbp(img, num_points, radius, eps=1e-7):
+    def extract_lbp(img, num_points, radius, eps=1e-7):
         # compute the Local Binary Pattern representation
         # of the image, and then use the LBP representation
         # to build the histogram of patterns
