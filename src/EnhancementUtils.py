@@ -1,3 +1,5 @@
+import math
+
 import cv2
 import numpy as np
 
@@ -21,3 +23,14 @@ class EnhancementUtils:
         img = np.uint8(img * 255)
         bilateral = cv2.bilateralFilter(img, d=d, sigmaColor=sigmaColor, sigmaSpace=sigmaSpace)
         return bilateral / 255
+
+    def automatic_gamma(self, img):
+        # convert img to gray
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # compute gamma = log(mid*255)/log(mean) --> it's a simple proportion!
+        mid = 0.5
+        mean = np.mean(gray)
+        gamma = math.log(mid * 255) / math.log(mean)
+        # do gamma correction
+        return np.power(img, gamma).clip(0, 255).astype(np.uint8)
+

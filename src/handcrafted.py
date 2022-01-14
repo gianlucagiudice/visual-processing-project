@@ -27,15 +27,14 @@ line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST
 f.write(line + '\n')
 
 # Define the model
-print('SIFT')
 n_sift = 50
 color_hist_bins = 128
 lbp_n_points = 24
 lbp_radius = 3
 compute_sift = True
-compute_hog = False
-compute_hist = False
-compute_lbp = False
+compute_hog = True
+compute_hist = True
+compute_lbp = True
 handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_n_points, lbp_radius, compute_sift,
                                      compute_hog, compute_hist, compute_lbp)
 
