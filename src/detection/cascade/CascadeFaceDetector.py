@@ -1,10 +1,12 @@
 import cv2
 from os.path import join
+import os
 
 
-DEFAULT_MODEL_PATH = 'detection/cascade/model/faceDetector_FDDB_LBP_10_0.01.xml'
-print(DEFAULT_MODEL_PATH)
+DEFAULT_MODEL_PATH = os.path.abspath('../detection/cascade/model/faceDetector_FDDB_LBP_10_0.01.xml')
+DEFAULT_MODEL_PATH = DEFAULT_MODEL_PATH.replace('\\', '/')
 
+print(f'Local path:', DEFAULT_MODEL_PATH)
 
 class CascadeFaceDetector:
 

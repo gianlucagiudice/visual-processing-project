@@ -47,6 +47,67 @@ def sample_n(dataset, n_subset):
     return dataset.head(math.floor(n_sample))
 
 
+def reorder_columns(dataset, head):
+    columns = dataset.columns.tolist()
+    tail = set(columns) - set(head)
+    ordered_columns = head + list(tail)
+    # Ordered columns
+    df = dataset[ordered_columns]
+
+    return df
+
+
+def remove_invalid_rows(dataset):
+    len_before = len(dataset)
+    print('Len before: ', len_before)
+    dataset = dataset.query('age<=100')
+    dataset = dataset[dataset.gender.notna()]
+    dataset = dataset[dataset.age.notna()]
+    len_after = len(dataset)
+    print('Len after: ', len_after)
+    print(f'Invalid rows: {(1 - len_after / len_before) * 100:.3f}%')
+
+    return dataset
+
+
+def are_rows_equal(rows):
+    for i in range(1, len(rows)):
+        if (rows[i - 1] == rows[i]).all():
+            return True
+    return False
+
+
+def is_image_padded(img, number_equal_rows=5):
+    nr = number_equal_rows
+    return any([
+        are_rows_equal(img[:nr, :, :]), are_rows_equal(img[-nr:, :, :]),
+        are_rows_equal(img.T[:nr, :, :]), are_rows_equal(img.T[-nr:, :, :])
+    ])
+
+
+def is_image_too_little(img, smallest_dim):
+    return img.shape[0] <= smallest_dim or img.shape[1] <= smallest_dim
+
+
+def remove_invalid_images(dataset, path, smallest_dim):
+    len_before = len(dataset)
+    print('Len before: ', len_before)
+
+    with tqdm(total=dataset.shape[0]) as pbar:
+        for index, row in dataset.iterrows():
+            img = cv2.imread(path + row.full_path)
+            if is_image_too_little(img, smallest_dim=smallest_dim) or is_image_padded(img):
+                dataset.drop(index, inplace=True)
+            pbar.update(1)
+
+    len_after = len(dataset)
+    print('Len after: ', len_after)
+    print(f'Invalid rows: {(1 - len_after / len_before) * 100:.3f}%')
+
+    return dataset
+
+
+
 class DataManager:
     X = ['path']
     y = ['gender', 'age']

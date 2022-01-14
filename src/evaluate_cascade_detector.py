@@ -7,8 +7,6 @@ from os.path import join
 
 cascade_face_detector = CascadeFaceDetector()
 
-
-
 path = 'C:/Users/Luca/Desktop/Universita/Magistrale/Lab_Visual/Progetto/FDDB/originalPics/2002/07/19/big'
 files = [x for x in os.listdir(path)]
 
