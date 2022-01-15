@@ -20,13 +20,13 @@ class YoloFaceDetector:
         res_swapped = []
 
         for box in res[0]:
-            a, b, c, d = box
+            x_min, y_min, x_max, y_max = box
             max_row, max_column = image.size
-            b = min(0, b)
-            a = min(0, a)
-            d = max(d, max_column - 1)
-            c = max(c, max_row - 1)
-            res_swapped.append([b, a, d, c])
+            y_min = round(max(0, y_min))
+            x_min = round(max(0, x_min))
+            y_max = round(min(y_max, max_column - 1))
+            x_max = round(min(x_max, max_row - 1))
+            res_swapped.append([y_min, x_min, y_max, x_max])
 
         res = list(zip(res_swapped, res[1]))
         res_sorted = sorted(list(res), key=lambda x: x[1], reverse=True)
