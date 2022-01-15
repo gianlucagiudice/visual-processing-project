@@ -1,4 +1,4 @@
-from config import IMBD_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
+from config import IMDB_CROPPED_METADATA_FILENAME, IMDB_CROPPED_PATH
 
 from src.DataManager import DataManager
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -10,7 +10,7 @@ N_SAMPLE = 25e3
 N_SAMPLE = 10
 
 # Read the data
-data_manager = DataManager(IMDB_CROPPED_PATH, IMBD_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE, n_subset=N_SAMPLE)
+data_manager = DataManager(IMDB_CROPPED_PATH, IMDB_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE, n_subset=N_SAMPLE)
 data = data_manager.get_dataset()
 
 # Split into train, validation, test
