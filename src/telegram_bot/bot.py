@@ -93,9 +93,7 @@ class TelegramBot:
 
                 self.bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
-                with self.graph.as_default():
-                    with self.session.as_default():
-                        self.faces = self.yolo_face_detector.detect_image(Image.fromarray(img_rescaled))
+                self.faces = self.detect_faces_yolo(img_rescaled)
                 print(self.faces)
 
                 num_faces_found = len(self.faces)
@@ -246,6 +244,12 @@ class TelegramBot:
         bot = telepot.Bot(TelegramBot.TOKEN)
         bot.setWebhook()  # unset webhook by supplying no parameter
         return bot
+
+    def detect_faces_yolo(self, img_rescaled):
+        with self.graph.as_default():
+            with self.session.as_default():
+                img = Image.fromarray(img_rescaled)
+                return self.yolo_face_detector.detect_image(img, return_confidence=False, th=0.5)
 
 
 # Loading detector
