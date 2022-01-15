@@ -85,11 +85,13 @@ class TelegramBot:
                 #img_rescaled = cv2.resize(img, dim)
                 img_rescaled = img
 
+                '''
                 utils = EnhancementUtils()
                 if utils.is_image_too_dark(img):
                     img_rescaled = utils.equalize_histogram(np.uint8(img_rescaled * 255))
                     img_rescaled = utils.automatic_gamma(img_rescaled)
                     img_rescaled = utils.adaptive_gamma(img_rescaled)
+                '''
 
                 self.bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
@@ -100,13 +102,13 @@ class TelegramBot:
 
                 print(f'Num faces found', num_faces_found)
                 if num_faces_found != 0:
-                    for idx, (x, y, w, h) in enumerate(self.faces):
+                    for idx, (x_min, y_min, x_max, y_max) in enumerate(self.faces):
                         label = str(idx + 1)
-                        cv2.rectangle(img_rescaled, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                        cv2.rectangle(img_rescaled, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
 
                         (w_space, h_space), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
-                        cv2.rectangle(img_rescaled, (x, y - 20), (x + w_space, y), (0, 0, 255), -1)
-                        cv2.putText(img_rescaled, label, (x, y - 5),
+                        cv2.rectangle(img_rescaled, (x_min, y_min - 20), (x_min + w_space, y_min), (0, 0, 255), -1)
+                        cv2.putText(img_rescaled, label, (x_min, y_min - 5),
                                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
 
                     detected_imagepath = 'detected_image.png'
@@ -140,7 +142,7 @@ class TelegramBot:
                     cropped_img = img[y:y + h, x:x + w]
 
                     # Predizioni con la rete
-                    predicted_age, predicted_gender = make_vgg_predictions(gender_vgg_model, age_vgg_model, cropped_img)
+                    predicted_age, predicted_gender = self.make_vgg_predictions(cropped_img)
 
                     print(f'Genere predetto: {predicted_gender}')
                     print(f'Età esatta predetta: {predicted_age}')
@@ -149,8 +151,8 @@ class TelegramBot:
                                    1: 'Femmina'}
 
                     self.bot.sendMessage(chat_id,
-                                    'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: [' + str(
-                                        predicted_age - 5) + ';' + str(predicted_age + 5))
+                                         f'Genere predetto: {gender_dict[predicted_gender]}\n'
+                                         f'Età predetta: [{predicted_age - 5}; + {predicted_age + 5}]')
 
                     # TODO : perform retrieval of most similar celebrity
                     #  celeb_name,celeb_image_path = retrieve_similar_celeb(cropped_img)
@@ -158,8 +160,10 @@ class TelegramBot:
                     celeb_name = 'Johnny Sins'
                     celeb_image_path = 'Johnny Sins.jpg'
 
+                    '''
                     self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
-                                  caption='Caspita! Assomigli proprio a ' + celeb_name)
+                                       caption='Caspita! Assomigli proprio a ' + celeb_name)
+                    '''
 
                     self.step = Step.RECEIVE_IMAGE
                     print(f'Step: {self.step}')
@@ -222,22 +226,24 @@ class TelegramBot:
                 else:
                     self.bot.sendMessage(chat_id, 'Input non valido, riprovare.\n(inserisci il numero del volto scelto)\n/Annulla')
 
-    def make_vgg_predictions(self, model_gender, model_age, img):
+    def make_vgg_predictions(self, img):
         SCALER = 116
 
-        img = cv2.resize(img, (224,224))
+        img = cv2.resize(img, (224, 224))
         img = img.astype('float32')
         img /= 255.0
 
-        # NON FUNZIONANO:
         with self.graph.as_default():
-            prediction_gender = model_gender.predict(np.expand_dims(img, axis=0))
-            prediction_gender = np.argmax(prediction_gender)
+            with self.session.as_default():
+                img = np.expand_dims(img, 0)
+                # Gender
+                prediction_gender = self.gender_vgg_model.predict(img)
+                prediction_gender = np.argmax(prediction_gender)
+                # Age
+                prediction_age = self.age_vgg_model.predict(img)
+                prediction_age = round(float(prediction_age*SCALER))
 
-        prediction_age = model_age.predict(np.expand_dims(img, axis=0))
-        prediction_age = round(float(prediction_age*SCALER))
-
-        return prediction_gender, prediction_age
+        return prediction_age, prediction_gender
 
     @staticmethod
     def init_bot():
@@ -256,9 +262,6 @@ class TelegramBot:
 #cascade_face_detector = CascadeFaceDetector()
 
 '''
-gender_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_gender_best.h5'))
-age_vgg_model = keras.models.load_model(os.path.abspath('../../model/finetuned_vgg_age_best.h5'))
-
 gender_vgg_model._make_predict_function()
 age_vgg_model._make_predict_function()
 '''
