@@ -10,9 +10,12 @@ from PIL import Image
 import keras
 import tensorflow.compat.v1 as tf
 
+from src.DataManager import DataManager
 from src.EnhancementUtils import EnhancementUtils
+from src.config import IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
+from src.models.Model import IMAGE_INPUT_SIZE
 
 
 class Step(Enum):
@@ -22,9 +25,9 @@ class Step(Enum):
 
 
 class TelegramBot:
-    TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
+    #TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
 
-    #TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
+    TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
 
     def __init__(self):
         # Bot
@@ -167,15 +170,13 @@ class TelegramBot:
                                          f'Età predetta: [{predicted_age - 5}; + {predicted_age + 5}]')
 
                     # TODO : perform retrieval of most similar celebrity
-                    #  celeb_name,celeb_image_path = retrieve_similar_celeb(cropped_img)
+                    celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
+                                                                               predicted_age)
 
-                    celeb_name = 'Johnny Sins'
-                    celeb_image_path = 'Johnny Sins.jpg'
 
-                    '''
                     self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
                                        caption='Caspita! Assomigli proprio a ' + celeb_name)
-                    '''
+
 
                     self.step = Step.RECEIVE_IMAGE
                     print(f'Step: {self.step}')
@@ -223,14 +224,13 @@ class TelegramBot:
                                             predicted_age-5) + ';' + str(predicted_age+5) + ']')
 
                         # TODO : perform retrieval of most similar celebrity
-                        #  celeb_name,celeb_image_path = retrieve_similar_celeb(cropped_img)
-                        '''
-                        celeb_name = 'Johnny Sins'
-                        celeb_image_path = 'Johnny Sins.jpg'
-    
+                        celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
+                                                                                   predicted_age)
+
+
                         self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
                                       caption='Caspita! Assomigli proprio a ' + celeb_name)
-                        '''
+
                         self.step = Step.RECEIVE_IMAGE
                         print(f'Step: {self.step}')
 
@@ -272,6 +272,17 @@ class TelegramBot:
                 img = Image.fromarray(img_rescaled)
                 return self.yolo_face_detector.detect_image(img, return_confidence=False, th=0.5)
 
+    def retrieve_similar_celeb(self, img_cropped, predicted_gender, predicted_age):
+        predicted_gender = int(not (predicted_gender))  # on IMDB gender are switched
+
+        data_manager = DataManager('../' + IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME, IMAGE_INPUT_SIZE,
+                                   n_subset=1, normalize_images=False, normalize_age=False)
+        data = data_manager.get_dataset()
+        filtered_data = data.query('gender == @predicted_gender')
+        filtered_data = filtered_data.query('@predicted_age - 5 <= age <= @predicted_age + 5')
+
+        # TODO: for now it returns the first actor with similar age and gender, but from now we have to use the similarity on the face!
+        return filtered_data.iloc[0]["name"], '../' + IMDB_CROPPED_PATH + '/' + filtered_data.iloc[0]["full_path"]
 
 # Loading detector
 #cascade_face_detector = CascadeFaceDetector()
