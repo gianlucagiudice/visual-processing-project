@@ -21,6 +21,11 @@ class YoloFaceDetector:
 
         for box in res[0]:
             a, b, c, d = box
+            max_row, max_column = image.size
+            b = min(0, b)
+            a = min(0, a)
+            d = max(d, max_column - 1)
+            c = max(c, max_row - 1)
             res_swapped.append([b, a, d, c])
 
         res = list(zip(res_swapped, res[1]))
