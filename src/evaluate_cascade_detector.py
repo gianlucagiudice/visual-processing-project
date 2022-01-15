@@ -10,6 +10,7 @@ cascade_face_detector = CascadeFaceDetector()
 path = 'C:/Users/Luca/Desktop/Universita/Magistrale/Lab_Visual/Progetto/FDDB/originalPics/2002/07/19/big'
 files = [x for x in os.listdir(path)]
 
+
 for f in files:
     p = join(path, f)
 
@@ -17,8 +18,9 @@ for f in files:
 
     faces = cascade_face_detector.detect_image(img)
 
-    for (x, y, w, h) in faces:
-        cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
+
+    for (x_min, y_min, x_max, y_max) in faces:
+        cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
 
     cv2.imshow(f, img)
 
