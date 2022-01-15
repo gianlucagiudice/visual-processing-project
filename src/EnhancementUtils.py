@@ -6,6 +6,8 @@ import numpy as np
 
 class EnhancementUtils:
 
+    # TODO: estimate of the blur
+
     def __init__(self):
         pass
 
