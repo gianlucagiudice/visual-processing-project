@@ -5,7 +5,7 @@ import numpy as np
 # Dataset path - imdb
 IMDB_CROPPED_PATH = '../dataset/imdb_crop'
 IMDB_CROPPED_METADATA_FILENAME = 'imdb.pickle'
-IMDB_FAMOUS_ACTORS_FILENAME = 'imdb_500actors.pickle'
+IMDB_FAMOUS_ACTORS_FILENAME = 'imdb_most_famous_actors.pickle'
 # utk
 UTK_PATH = '../dataset/utk'
 UTK_METADATA_FILENAME = 'utk.pickle'
