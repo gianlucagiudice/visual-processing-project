@@ -1,21 +1,27 @@
 import os.path
 from enum import Enum
+from os import path
 
 import numpy as np
+import pandas as pd
 import telepot
 import time
 import cv2
 from PIL import Image
+from urllib.request import urlopen
 
 import keras
 import tensorflow.compat.v1 as tf
 
 from src.DataManager import DataManager
 from src.EnhancementUtils import EnhancementUtils
-from src.config import IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME
+from src.config import IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME, WIKI_PATH, WIKI_FAMOUS_ACTORS_FILENAME
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
 from src.models.Model import IMAGE_INPUT_SIZE
+
+METADATA_IMDB_FILE = '../../dataset/imdb_crop/imdb_most_famous_actors.pickle'
+METADATA_WIKI_FILE = '../../dataset/imdb_crop/wiki_most_famous_actors.pickle'
 
 
 class Step(Enum):
@@ -174,8 +180,7 @@ class TelegramBot:
                     celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
                                                                                predicted_age)
 
-
-                    self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                    self.bot.sendPhoto(chat_id, celeb_image_path,
                                        caption='Caspita! Assomigli proprio a ' + celeb_name)
 
 
@@ -228,8 +233,7 @@ class TelegramBot:
                         celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
                                                                                    predicted_age)
 
-
-                        self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                        self.bot.sendPhoto(chat_id, photo=celeb_image_path,
                                       caption='Caspita! Assomigli proprio a ' + celeb_name)
 
                         self.step = Step.RECEIVE_IMAGE
@@ -274,16 +278,17 @@ class TelegramBot:
                 return self.yolo_face_detector.detect_image(img, return_confidence=False, th=0.5)
 
     def retrieve_similar_celeb(self, img_cropped, predicted_gender, predicted_age):
-        predicted_gender = int(not (predicted_gender))  # on IMDB gender are switched
+        predicted_gender = int(not predicted_gender)  # on IMDB gender are switched
 
-        data_manager = DataManager('../' + IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME, IMAGE_INPUT_SIZE,
-                                   n_subset=1, normalize_images=False, normalize_age=False)
-        data = data_manager.get_dataset()
-        filtered_data = data.query('gender == @predicted_gender')
-        filtered_data = filtered_data.query('@predicted_age - 5 <= age <= @predicted_age + 5')
+        data = pd.read_pickle(METADATA_WIKI_FILE)
+
+        filtered_data_gender = data.query('gender == @predicted_gender')
+        filtered_data = filtered_data_gender.query('@predicted_age - 5 <= age <= @predicted_age + 5')
+        if filtered_data.empty:
+            filtered_data = filtered_data_gender.query('@predicted_age - 10 <= age <= @predicted_age + 10')
 
         # TODO: for now it returns the first actor with similar age and gender, but from now we have to use the similarity on the face!
-        return filtered_data.iloc[0]["name"], '../' + IMDB_CROPPED_PATH + '/' + filtered_data.iloc[0]["full_path"]
+        return filtered_data.iloc[0]["name"], filtered_data.iloc[0]["url_img"]
 
 # Loading detector
 #cascade_face_detector = CascadeFaceDetector()
