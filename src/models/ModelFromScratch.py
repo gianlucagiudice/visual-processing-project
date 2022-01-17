@@ -10,7 +10,7 @@ import keras.engine.functional
 import numpy as np
 import tensorflow as tf
 import visualkeras
-from keras.layers import Dense
+from keras.layers import Dense, MaxPool2D, Conv2D, GlobalAveragePooling2D
 from keras.layers import (Dropout, BatchNormalization, Activation)
 from keras.models import Model
 
@@ -18,14 +18,12 @@ from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR
 from src.models.Model import IMAGE_INPUT_SIZE
 from src.models.Model import Model as MyModel
 
-LR = 0.0001
+LR = 0.001
 
 EPOCHS = 50
 BATCH_SIZE = 512
-PATIENCE = 5
-DROPOUT = 0.2
-
-# tensorboard --logdir log/fit/from_scratch
+PATIENCE = 10
+DROPOUT = 0.4
 
 
 def print_tensorboard_command():
@@ -64,26 +62,20 @@ class ModelFromScratch(MyModel):
         self.save_summary_output()
 
     def init_model(self, input_size):
-        '''
         # Neural Net
         input = keras.layers.Input(shape=input_size)
 
         # Hidden convolutional layers
-        h_conv1 = Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input)))
+        h_conv1 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input))))
         h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(h_conv1))))
+        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv2))))
+        h_conv4 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
+        h_conv5 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
 
         # Flatten layers after convolutions
-        h_conv6_flat = GlobalAveragePooling2D()(h_conv2)
+        h_conv5_flat = GlobalAveragePooling2D()(h_conv5)
 
-        # Dense layers
-        s_fc1 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(512)(h_conv6_flat))))
-        s_fc2 = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(s_fc1))))
-
-        return Model(inputs=input, outputs=s_fc2)
-        '''
-
-        return tf.keras.applications.MobileNetV3Small(include_top=False, input_shape=input_size,
-                                                      pooling='avg', weights=None)
+        return Model(inputs=input, outputs=h_conv5_flat)
 
     def predict(self, image: np.array) -> (bool, int):
         return self.model.predict(image)
@@ -128,12 +120,15 @@ class ModelFromScratch(MyModel):
             log_dir=self.log_dir_training, histogram_freq=1, update_freq='batch')
 
         # Fit model
+        print(self.model.summary())
         print_tensorboard_command()
 
         print('>>> Start training')
         history = self.model.fit(x=x_train,
                                  y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
                                  validation_data=(x_val, [y_val['gender'], y_val['age']]),
+                                 #y=y_train['gender'],
+                                 #validation_data=(x_val, y_val['gender']),
                                  use_multiprocessing=True,
                                  workers=os.cpu_count(),
                                  callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback],
@@ -180,8 +175,8 @@ class ModelFromScratch(MyModel):
     def save_weights(self) -> None:
         pass
 
-    def load_weights(self):
-        pass
+    def load_weights(self, path='../model/from_scratch_best.h5'):
+        self.model = keras.models.load_model(path)
 
     '''
     @staticmethod
@@ -200,6 +195,17 @@ class ModelFromScratch(MyModel):
         return model
     '''
 
+    '''
+    def top_k_accuracy(y_pred, y_true, k=5):
+        total = len(y_pred)
+        count = 0
+        for idx, _ in enumerate(y_pred):
+            if abs(y_pred[idx] - y_true[idx]) <= k:
+                count += 1
+
+        return round(100 * count / total, 2)
+    '''
+
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
         # Since in the ResNet50 constructor I specified the "include_top = False", the last 2 layers of the network
@@ -211,13 +217,13 @@ class ModelFromScratch(MyModel):
         final_layer = starting_model.output
 
         # Gender layer
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(gender_layer))))
+        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(256)(final_layer))))
+        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(128)(gender_layer))))
         gender_layer = Dense(1, name='gender_output', activation='sigmoid')(gender_layer)
 
         # Age layer
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(256)(final_layer))))
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization(axis=1)(Dense(128)(age_layer))))
+        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(256)(final_layer))))
+        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(128)(age_layer))))
         age_layer = Dense(1, name='age_output', activation='linear')(age_layer)
 
         # Final model
