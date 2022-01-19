@@ -1,0 +1,65 @@
+Search space summary
+Default search space size: 2
+dropout_rate (Float)
+{'default': 0.4, 'conditions': [], 'min_value': 0.1, 'max_value': 0.5, 'step': 0.05, 'sampling': None}
+learning_rate (Choice)
+{'default': 0.1, 'conditions': [], 'values': [0.1, 0.01, 0.001, 0.0001], 'ordered': True}
+None
+
+----------------------------------------------------------------------------------------------------
+
+Results summary
+Results in ../temp/log_tuner_search/untitled_project
+Showing 10 best trials
+Objective(name='val_loss', direction='min')
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.6671451330184937
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.6811801791191101
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.6949681043624878
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.7082483172416687
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.7088262438774109
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.7559584975242615
+Trial summary
+Hyperparameters:
+dropout_rate: 0.30000000000000004
+learning_rate: 0.0001
+Score: 0.7689176201820374
+Trial summary
+Hyperparameters:
+dropout_rate: 0.45000000000000007
+learning_rate: 0.01
+Score: 0.7735047936439514
+Trial summary
+Hyperparameters:
+dropout_rate: 0.5000000000000001
+learning_rate: 0.0001
+Score: 0.788580596446991
+Trial summary
+Hyperparameters:
+dropout_rate: 0.20000000000000004
+learning_rate: 0.1
+Score: 0.8457997441291809
+None
