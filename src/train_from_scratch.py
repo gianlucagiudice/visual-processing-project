@@ -5,6 +5,7 @@ from config import FULL_UTK_CROPPED_PATH, FULL_UTK_CROPPED_METADATA_FILENAME
 INPUT_SIZE = (124, 124, 3)
 
 N_SAMPLE = 1
+TRAIN_VS_SEARCH = 'search'
 
 # Read the data
 data_manager = DataManager(FULL_UTK_CROPPED_PATH,
@@ -26,7 +27,12 @@ print('Read test images ...')
 X_test, y_test = data_manager.get_X(test), data_manager.get_y(test)
 
 model_from_scratch = ModelFromScratch(INPUT_SIZE)
-model_from_scratch.train(X_train, y_train, X_val, y_val, X_test, y_test)
+
+if TRAIN_VS_SEARCH == 'tran':
+    model_from_scratch.train(X_train, y_train, X_val, y_val, X_test, y_test)
+elif TRAIN_VS_SEARCH == 'search':
+    model_from_scratch.hyperparameter_optimization(X_train, y_train, X_val, y_val, X_test, y_test, max_trials=10)
+
 
 
 

@@ -13,6 +13,7 @@ import visualkeras
 from keras.layers import Dense, MaxPool2D, Conv2D, GlobalAveragePooling2D
 from keras.layers import (Dropout, BatchNormalization, Activation)
 from keras.models import Model
+import keras_tuner as kt
 
 from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR, SAVE_MODEL_DIR
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -20,9 +21,9 @@ from src.models.Model import Model as MyModel
 
 LR = 0.001
 
-EPOCHS = 50
+EPOCHS = 25
 BATCH_SIZE = 512
-PATIENCE = 10
+PATIENCE = 5
 DROPOUT = 0.4
 
 
@@ -48,12 +49,26 @@ class ModelFromScratch(MyModel):
     log_dir_training = log_dir + datetime.now().strftime("%Y%m%d-%H%M%S")
     model_name = 'from_scratch'
 
+    # Define callbacks
+    early_stopping_callback = tf.keras.callbacks.EarlyStopping(
+        mode='min',
+        monitor='val_loss',
+        patience=PATIENCE
+    )
+
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        save_weights_only=True,
+        save_best_only=True,
+        monitor='val_loss',
+        mode='min'
+    )
+
     def __init__(self, input_size=IMAGE_INPUT_SIZE):
         super().__init__(input_size)
+        self.input_size = input_size
         # Backbone: MobileNetV3Small
-        self.model = self.init_model(input_size)
-        # Reset weights
-        #self.model = self.reset_weights(self.model)
+        self.model = self.init_model(self.input_size)
         # Add output layers
         self.model = self.add_output_layers(self.model)
         # Save network architecture
@@ -61,28 +76,63 @@ class ModelFromScratch(MyModel):
         # Save summary
         self.save_summary_output()
 
-    def init_model(self, input_size):
-        # Neural Net
-        input = keras.layers.Input(shape=input_size)
+    def build_model(self, hp):
+        dropout = hp.Float(
+            'dropout_rate',
+            min_value=0.1,
+            max_value=0.5,
+            default=0.4,
+            step=0.05,
+        )
 
-        # Hidden convolutional layers
-        h_conv1 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input))))
-        h_conv2 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(h_conv1))))
-        h_conv3 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv2))))
-        h_conv4 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
-        h_conv5 = MaxPool2D((2, 2))(Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
+        lr = hp.Choice('learning_rate', values=[1e-1, 1e-2, 1e-3, 1e-4])
 
-        # Flatten layers after convolutions
-        h_conv5_flat = GlobalAveragePooling2D()(h_conv5)
+        model = self.init_model(self.input_size)
+        model = self.add_output_layers(model, lr=lr, dropout=dropout)
+        return model
 
-        return Model(inputs=input, outputs=h_conv5_flat)
+    def hyperparameter_optimization(self, X_train, y_train, X_val, y_val, X_test, y_test, max_trials=20):
+        log_dir_tuner = LOG_DIR + '_tuner_search'
+        tuner = kt.BayesianOptimization(
+            self.build_model,
+            objective='val_loss',
+            max_trials=max_trials,
+            executions_per_trial=1,
+            directory=log_dir_tuner
+            )
+        tuner.search(X_train, {'gender_output': y_train['gender'], 'age_output': y_train['age']},
+                     validation_data=(X_val, [y_val['gender'], y_val['age']]),
+                     callbacks=[ModelFromScratch.early_stopping_callback,
+                                ModelFromScratch.model_checkpoint_callback],
+                     epochs=EPOCHS
+                     )
+        # Dump tuner info
+        with open(f"{log_dir_tuner}/tuner.pkl", "wb") as f:
+            pickle.dump(tuner, f)
+        # Save tuner info
+        original_stdout = sys.stdout
+        with open(f"{log_dir_tuner}/tuner.txt", "w") as f:
+            sys.stdout = f
+            print(tuner.search_space_summary())
+            print(f'\n{"-"*100}\n')
+            print(tuner.results_summary())
+            sys.stdout = original_stdout
+        # Print tuner info
+        print(tuner.search_space_summary())
+        print(tuner.results_summary())
+        # Save model
+        self.model = tuner.get_best_models()[0]
+        # Save best weights
+        self.save_weights()
+        # Evaluate model
+        self.evaluate(X_test, y_test)
 
     def predict(self, image: np.array) -> (bool, int):
         return self.model.predict(image)
 
     def extract_feature(self, image):
-        output_1 = 'activation_1'
-        output_2 = 'activation_3'
+        output_1 = 'activation_features_1'
+        output_2 = 'activation_features_2'
 
         intermediate_1 = keras.models.Model(inputs=self.model.layers[0].input,
                                             outputs=self.model.get_layer(output_1).output)
@@ -101,21 +151,6 @@ class ModelFromScratch(MyModel):
         # Init temp directories
         init_temp_dirs()
 
-        # Define callbacks
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(
-            mode='min',
-            monitor='val_loss',
-            patience=PATIENCE
-        )
-
-        model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=self.checkpoint_filepath,
-            save_weights_only=True,
-            save_best_only=True,
-            monitor='val_loss',
-            mode='min'
-        )
-
         tensorboard_callback = tf.keras.callbacks.TensorBoard(
             log_dir=self.log_dir_training, histogram_freq=1, update_freq='batch')
 
@@ -127,11 +162,10 @@ class ModelFromScratch(MyModel):
         history = self.model.fit(x=x_train,
                                  y={'gender_output': y_train['gender'], 'age_output': y_train['age']},
                                  validation_data=(x_val, [y_val['gender'], y_val['age']]),
-                                 #y=y_train['gender'],
-                                 #validation_data=(x_val, y_val['gender']),
                                  use_multiprocessing=True,
                                  workers=os.cpu_count(),
-                                 callbacks=[early_stopping_callback, model_checkpoint_callback, tensorboard_callback],
+                                 callbacks=[ModelFromScratch.early_stopping_callback,
+                                            ModelFromScratch.model_checkpoint_callback, tensorboard_callback],
                                  epochs=EPOCHS)
 
         # Dump history dictinary
@@ -142,7 +176,7 @@ class ModelFromScratch(MyModel):
         self.load_best_weights()
 
         # Save the model
-        self.model.save(join(SAVE_MODEL_DIR, ModelFromScratch.model_name + '.h5'))
+        self.save_weights()
 
         # Evaluate model
         self.evaluate(x_test, y_test)
@@ -173,57 +207,68 @@ class ModelFromScratch(MyModel):
             sys.stdout = orig_stdout
 
     def save_weights(self) -> None:
-        pass
+        self.model.save(join(SAVE_MODEL_DIR, ModelFromScratch.model_name + '.h5'))
 
     def load_weights(self, path='../model/from_scratch_best.h5'):
         self.model = keras.models.load_model(path)
 
-    '''
     @staticmethod
-    def reset_weights(model):
-        for i, layer in enumerate(model.layers):
-            if hasattr(model.layers[i], 'kernel_initializer') and hasattr(model.layers[i], 'bias_initializer'):
-                weight_initializer = model.layers[i].kernel_initializer
-                bias_initializer = model.layers[i].bias_initializer
+    def init_model(input_size):
+        # Neural Net
+        input = keras.layers.Input(shape=input_size)
 
-                old_weights, old_biases = model.layers[i].get_weights()
+        # Hidden convolutional layers
+        h_conv1 = MaxPool2D((2, 2))(
+            Activation('relu')(BatchNormalization(axis=3)(Conv2D(32, 3, padding='same')(input))))
+        h_conv2 = MaxPool2D((2, 2))(
+            Activation('relu')(BatchNormalization(axis=3)(Conv2D(64, 3, padding='same')(h_conv1))))
+        h_conv3 = MaxPool2D((2, 2))(
+            Activation('relu')(BatchNormalization(axis=3)(Conv2D(128, 3, padding='same')(h_conv2))))
+        h_conv4 = MaxPool2D((2, 2))(
+            Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv3))))
+        h_conv5 = MaxPool2D((2, 2))(
+            Activation('relu')(BatchNormalization(axis=3)(Conv2D(256, 3, padding='same')(h_conv4))))
 
-                model.layers[i].set_weights([
-                    weight_initializer(shape=old_weights.shape),
-                    bias_initializer(shape=old_biases.shape)
-                ])
-        return model
-    '''
+        # Flatten layers after convolutions
+        h_conv5_flat = GlobalAveragePooling2D()(h_conv5)
 
-    '''
-    def top_k_accuracy(y_pred, y_true, k=5):
-        total = len(y_pred)
-        count = 0
-        for idx, _ in enumerate(y_pred):
-            if abs(y_pred[idx] - y_true[idx]) <= k:
-                count += 1
-
-        return round(100 * count / total, 2)
-    '''
+        return Model(inputs=input, outputs=h_conv5_flat)
 
     @staticmethod
-    def add_output_layers(starting_model: keras.engine.functional.Functional):
-        # Since in the ResNet50 constructor I specified the "include_top = False", the last 2 layers of the network
-        # are removed. By including "pooling = avg" the network is constructed inserting a GlobalAveragePooling2D
-        # layer as the last layer of the network. In order to accomplish the multitask learning I need to add
-        # 2 new layers
+    def add_output_layers(starting_model: keras.engine.functional.Functional,
+                          lr=LR, dropout=DROPOUT):
 
         # Output layer of the model
         final_layer = starting_model.output
 
         # Gender layer
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(256)(final_layer))))
-        gender_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(128)(gender_layer))))
+        gender_layer = \
+            Dropout(rate=dropout)(
+                Activation(name='activation_features_1', activation='relu')(
+                    BatchNormalization()(
+                        Dense(units=256)(
+                            final_layer))))
+        gender_layer = \
+            Dropout(rate=dropout)(
+                Activation('relu')(
+                    BatchNormalization()(
+                        Dense(units=128)(
+                            gender_layer))))
         gender_layer = Dense(1, name='gender_output', activation='sigmoid')(gender_layer)
 
         # Age layer
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(256)(final_layer))))
-        age_layer = Dropout(DROPOUT)(Activation('relu')(BatchNormalization()(Dense(128)(age_layer))))
+        age_layer = \
+            Dropout(rate=dropout)(
+                Activation(name='activation_features_2', activation='relu')(
+                    BatchNormalization()(
+                        Dense(units=256)(
+                            final_layer))))
+        age_layer = \
+            Dropout(rate=dropout)(
+                Activation('relu')(
+                    BatchNormalization()(
+                        Dense(units=128)(
+                            age_layer))))
         age_layer = Dense(1, name='age_output', activation='linear')(age_layer)
 
         # Final model
@@ -242,7 +287,7 @@ class ModelFromScratch(MyModel):
             "gender_output": 'accuracy',
             "age_output": 'mean_absolute_error'
         }
-        optimizer = tf.keras.optimizers.Adam(LR)
+        optimizer = tf.keras.optimizers.Adam(learning_rate=lr)
 
         final_model.compile(loss=losses, loss_weights=lossWeights, metrics=metrics, optimizer=optimizer)
         return final_model
