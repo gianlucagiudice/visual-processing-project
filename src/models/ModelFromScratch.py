@@ -186,12 +186,16 @@ class ModelFromScratch(MyModel):
         best_model = sorted(ckpt_list, key=lambda x: x[1], reverse=True)[0][0]
         self.model.load_weights(join(self.checkpoint_dir, best_model))
 
-    def evaluate(self, x_test, y_test):
+    def evaluate(self, x_test, y_test, path=None, dump=True):
         results = self.model.evaluate(x=x_test,
                                       y={'gender_output': y_test['gender'], 'age_output': y_test['age']})
         # Dump evaluation result
-        with open(join(self.checkpoint_dir, 'from_scratch_evaluation.pickle'), 'wb') as handle:
-            pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        if path is None:
+            path = join(self.checkpoint_dir, 'from_scratch_evaluation.pickle')
+        if dump:
+            with open(path, 'wb') as handle:
+                pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        return results
 
     def save_plot_network(self):
         file_path = join(OUTPUT_IMAGE_FOLDER, 'model_from_scratch_plot.png')
