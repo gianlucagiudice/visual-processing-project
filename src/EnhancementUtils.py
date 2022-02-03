@@ -31,10 +31,9 @@ class EnhancementUtils:
     def automatic_gamma(self, img):
         # convert img to gray
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # compute gamma = log(mid*255)/log(mean) --> it's a simple proportion!
         mid = 0.5
         mean = np.mean(gray)
-        gamma = math.log(mid * 255) / math.log(mean)
+        gamma = math.log(mid * 255) / math.log(mean)  # --> it's a simple proportion!
         # do gamma correction
         return np.power(img, gamma).clip(0, 255).astype(np.uint8)
 

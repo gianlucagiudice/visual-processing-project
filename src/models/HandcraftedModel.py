@@ -121,6 +121,15 @@ class HandcraftedModel(MyModel):
 
         return pickle_clf, pickle_regressor, pickle_kmeans
 
+    def compute_top_k_accuracy(self, k, age, age_preds):
+        top_k_acc = 0
+
+        for i in range(len(age)):
+            if abs(age[i] - age_preds[i]) < k:
+                top_k_acc += 1
+
+        return top_k_acc / len(age)
+
     def evaluate(self, df):
         f = open('evaluation_handcrafted.txt', 'a')
         line = 'HC;' + str(self.n_sift) + ';' + str(self.color_hist_bins) + ';' + str(self.lbp_n_points) + ';' + str(
@@ -132,8 +141,8 @@ class HandcraftedModel(MyModel):
         acc = accuracy_score(df["gender"], preds)
         conf_mat = confusion_matrix(df["gender"], preds)
         print('Accuracy: ' + str(acc))
-        sns.heatmap(conf_mat, linewidth=0.5)
-        plt.show()
+        #sns.heatmap(conf_mat, linewidth=0.5)
+        #plt.show()
 
         print('Evaluation of age regression')
         preds = self.regressor.predict(df.drop(columns=["age", "gender"], axis=1))
@@ -143,9 +152,17 @@ class HandcraftedModel(MyModel):
         mse = mean_squared_error(age, age_preds)
         rmse = math.sqrt(mean_squared_error(age, age_preds))
         mae = mean_absolute_error(age, age_preds)
+        top5 = self.compute_top_k_accuracy(5, age, age_preds)
+        top10 = self.compute_top_k_accuracy(10, age, age_preds)
+        top15 = self.compute_top_k_accuracy(15, age, age_preds)
+        top20 = self.compute_top_k_accuracy(20, age, age_preds)
         print('Mean squared error: ' + str(mse))
         print('Root mean squared error: ' + str(rmse))
         print('Mean absolute error: ' + str(mae))
+        print('Top-5 accuracy: ' + str(top5))
+        print('Top-10 accuracy: ' + str(top10))
+        print('Top-15 accuracy: ' + str(top15))
+        print('Top-20 accuracy: ' + str(top20))
 
         age_val = [math.floor(a) for a in age]
         age_preds_val = [math.floor(a) for a in age_preds]
@@ -153,8 +170,8 @@ class HandcraftedModel(MyModel):
         #conf_mat_val = confusion_matrix(age_val, age_preds_val)
 
         #sns.heatmap(conf_mat_val, linewidth=0.5)
-        plt.scatter(age_val, age_preds_val)
-        plt.show()
+        #plt.scatter(age_val, age_preds_val)
+        #plt.show()
 
         # accuracy on 4 classes (10-18 teenager, 18-35 young adult, 35-55 adult, 60-100 old)
         classes_val = []
@@ -181,16 +198,18 @@ class HandcraftedModel(MyModel):
 
         conf_mat_classes = confusion_matrix(classes_val, classes_preds)
 
-        sns.heatmap(conf_mat_classes, linewidth=0.5)
-        plt.show()
+        #sns.heatmap(conf_mat_classes, linewidth=0.5)
+        #plt.show()
 
-        line = line + str(acc) + ';' + str(mse) + ';' + str(rmse) + ';' + str(mae)
+        line = line + str(acc) + ';' + str(mse) + ';' + str(rmse) + ';' + str(mae) + ';' + str(top5) + ';' + str(top10)\
+               + ';' + str(top15) + ';' + str(top20)
 
         finish_time = datetime.now()
         delta_time = finish_time - self.time
         line = line + ';' + str(delta_time)
 
         f.write(line + '\n')
+        f.close()
 
     def extract_dataset_features(self, X, y, compute_sift, compute_hog, compute_hist, compute_lbp, kmeans_sift, k):
         df = pd.DataFrame()
