@@ -28,7 +28,6 @@ class TelegramBot:
     TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
 
 
-
     #TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
 
     def __init__(self):
