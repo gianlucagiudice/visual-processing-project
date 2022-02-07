@@ -114,6 +114,7 @@ class PretrainedVGG(MyModel):
         best_model = sorted(ckpt_list, key=lambda x: x[1], reverse=True)[0][0]
         self.model.load_weights(join(self.checkpoint_dir, best_model))
 
+
     def evaluate(self, x_test, y_test):
         results = self.model.evaluate(x=x_test,
                                       y={'gender_output': y_test['gender'], 'age_output': y_test['age']})
@@ -137,10 +138,26 @@ class PretrainedVGG(MyModel):
     def save_weights(self) -> None:
         pass
 
-    def load_weights(self, path='../model/vggface_model_final.h5'):
-        self.model = keras.models.load_model(path)
+    def load_weights(self, path='../model/vggface_model_final.h5', feature_extractor = False):
+        model = keras.models.load_model(path)
 
-    '''
+        if feature_extractor:
+            vggface_extractor = keras.Model(inputs=model.layers[1].input,
+                                            outputs=model.layers[1].output)
+            self.model = vggface_extractor
+        else:
+            self.model = model
+
+    def extract_features(self, img):
+        return self.model.predict(img)
+
+    def get_input_shape(self):
+        return 224, 224
+
+
+    def load_feature_extractor(self, path='../model/vggface_model_final.h5'):
+
+        '''
     @staticmethod
     def reset_weights(model):
         for i, layer in enumerate(model.layers):
