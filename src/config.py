@@ -7,14 +7,14 @@ IMDB_CROPPED_PATH = '../dataset/imdb_crop'
 IMDB_CROPPED_METADATA_FILENAME = 'imdb.pickle'
 IMDB_FAMOUS_ACTORS_FILENAME = 'imdb_most_famous_actors.pickle'
 # utk
-UTK_PATH = '../dataset/utk'
-UTK_METADATA_FILENAME = 'utk.pickle'
+UTK_PATH = '../dataset/utk/images'
+UTK_METADATA_FILENAME = 'utk_full.pickle'
 # wiki
 WIKI_PATH = '../dataset/imdb_crop'
 WIKI_FAMOUS_ACTORS_FILENAME = 'wiki_most_famous_actors.pickle'
 
-UTK_CROPPED_PATH = '../dataset/utk/crop_part1'
-UTK_CROPPED_METADATA_FILENAME = '../utk.pickle'
+UTK_CROPPED_PATH = '../dataset/utk/images'
+UTK_CROPPED_METADATA_FILENAME = '../utk_full.pickle'
 
 FULL_UTK_CROPPED_PATH = '../dataset/utk/images'
 FULL_UTK_CROPPED_METADATA_FILENAME = '../utk_full.pickle'

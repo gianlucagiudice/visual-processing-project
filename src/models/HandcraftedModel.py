@@ -70,7 +70,7 @@ class HandcraftedModel(MyModel):
     def train(self, x_train, y_train, x_val, y_val, x_test, y_test) -> None:
         self.time = datetime.now()
 
-        kmeans = None
+        self.kmeans = None
         k = 0
         if self.compute_sift:
             # sift extraction (knn)
@@ -131,6 +131,15 @@ class HandcraftedModel(MyModel):
             pickle_kmeans = pickle.load(file)
 
         return pickle_clf, pickle_regressor, pickle_kmeans
+
+    def compute_top_k_accuracy(self, k, age, age_preds):
+        top_k_acc = 0
+
+        for i in range(len(age)):
+            if abs(age[i] - age_preds[i]) <= k:
+                top_k_acc += 1
+
+        return top_k_acc / len(age)
 
     def evaluate(self, df):
         f = open('evaluation_handcrafted.txt', 'a')
@@ -359,8 +368,11 @@ class HandcraftedModel(MyModel):
         image8bit = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype('uint8')
         keypoints, descriptors = detector.detectAndCompute(image8bit, None)
         # normalize descriptors
-        for i in range(len(descriptors)):
-            descriptors[i] = [x / sum(descriptors[i]) for x in descriptors[i]]
+        if descriptors is None or len(descriptors) == 0:
+            descriptors = np.array([[0]*128]*25)
+        else:
+            for i in range(len(descriptors)):
+                descriptors[i] = [x / sum(descriptors[i]) for x in descriptors[i]]
 
         return keypoints, descriptors
 
