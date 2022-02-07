@@ -120,13 +120,13 @@ class HandcraftedModel(MyModel):
             pickle.dump(self.kmeans, file)
 
     def load_weights(self):
-        pkl_filename_clf = "../src/handcrafted_clf.pkl"
+        pkl_filename_clf = "../model/handcrafted_clf.pkl"
         with open(pkl_filename_clf, 'rb') as file:
             pickle_clf = pickle.load(file)
-        pkl_filename_reg = "../src/handcrafted_regressor.pkl"
+        pkl_filename_reg = "../model/handcrafted_regressor.pkl"
         with open(pkl_filename_reg, 'rb') as file:
             pickle_regressor = pickle.load(file)
-        pkl_filename_kmeans = "../src/handcrafted_kmeans.pkl"
+        pkl_filename_kmeans = "../model/handcrafted_kmeans.pkl"
         with open(pkl_filename_kmeans, 'rb') as file:
             pickle_kmeans = pickle.load(file)
 
@@ -261,7 +261,7 @@ class HandcraftedModel(MyModel):
             # SIFT - on the entire face
             kp, descriptors = self.extract_sift(grey, self.n_sift)
             histo = np.zeros(k)
-            nkp = np.size(kp)
+            nkp = np.size(kp) or self.n_sift
             for d in descriptors:
                 idx = kmeans_sift.predict([d])
                 histo[idx] += 1 / nkp
