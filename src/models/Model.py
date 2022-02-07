@@ -1,6 +1,8 @@
 import numpy as np
 from abc import ABC, abstractmethod
 
+IMAGE_INPUT_SIZE = (224, 224, 3)
+
 
 class Model(ABC):
     def __init__(self, input_size: np.array):
