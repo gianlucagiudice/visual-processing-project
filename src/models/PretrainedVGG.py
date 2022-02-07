@@ -57,6 +57,7 @@ class PretrainedVGG(MyModel):
         # Save summary
         self.save_summary_output()
 
+
     def init_model(self, last_layer):
         base_vgg16_model = tf.keras.applications.VGG16(include_top=True, pooling='avg', weights="imagenet")
         vgg16_model = Model(inputs=base_vgg16_model.input, outputs=base_vgg16_model.get_layer(last_layer).output)
@@ -146,7 +147,8 @@ class PretrainedVGG(MyModel):
         pass
 
     def load_weights(self):
-        pass
+        model_path = '../../model/vggface_model_final.h5'
+        self.model = keras.load_model(model_path)
 
     '''
     @staticmethod
@@ -166,7 +168,7 @@ class PretrainedVGG(MyModel):
     '''
 
     def predict(self, image: np.array) -> (bool, int):
-        pass
+        self.model.predict(image)
 
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
