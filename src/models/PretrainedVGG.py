@@ -145,7 +145,8 @@ class PretrainedVGG(MyModel):
         pass
 
     def load_weights(self):
-        pass
+        model_path = '../../model/vggface_model_final.h5'
+        self.model = keras.load_model(model_path)
 
     '''
     @staticmethod
@@ -165,7 +166,7 @@ class PretrainedVGG(MyModel):
     '''
 
     def predict(self, image: np.array) -> (bool, int):
-        pass
+        self.model.predict(image)
 
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
