@@ -29,8 +29,18 @@ class HandcraftedModel(MyModel):
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
     log_dir = join(LOG_DIR, 'fit', 'handcrafted/') + datetime.now().strftime("%Y%m%d-%H%M%S")
 
-    def __init__(self, data_manager, n_sift, color_hist_bins, lbp_n_points, lbp_radius, compute_sift=True,
-                 compute_hog=True, compute_hist=True, compute_lbp=True, input_size=IMAGE_INPUT_SIZE):
+    def __init__(self,
+                 data_manager,
+                 n_sift=25,
+                 color_hist_bins=128,
+                 lbp_n_points=24,
+                 lbp_radius=3,
+                 compute_sift=True,
+                 compute_hog=True,
+                 compute_hist=True,
+                 compute_lbp=True,
+                 input_size=IMAGE_INPUT_SIZE
+                 ):
         super().__init__(input_size)
         self.data_manager = data_manager
         self.n_sift = n_sift
