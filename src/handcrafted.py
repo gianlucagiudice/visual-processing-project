@@ -1,4 +1,4 @@
-from config import UTK_PATH, UTK_METADATA_FILENAME
+from config import FULL_UTK_CROPPED_PATH, FULL_UTK_CROPPED_METADATA_FILENAME
 from src.DataManager import DataManager
 from src.models.HandcraftedModel import HandcraftedModel
 from src.models.Model import IMAGE_INPUT_SIZE
@@ -6,7 +6,7 @@ from src.models.Model import IMAGE_INPUT_SIZE
 N_SAMPLE = 1
 
 # Read the data
-data_manager = DataManager(UTK_PATH, UTK_METADATA_FILENAME, IMAGE_INPUT_SIZE,
+data_manager = DataManager(FULL_UTK_CROPPED_PATH, FULL_UTK_CROPPED_METADATA_FILENAME, IMAGE_INPUT_SIZE,
                            n_subset=N_SAMPLE, normalize_images=True, normalize_age=True)
 data = data_manager.get_dataset()
 
@@ -26,6 +26,8 @@ line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST
        'ACCCLF;RECCLF;FSCORECLF;MSEREG;RMSEREG;MAEREG;TOP5ACC;TOP10ACC;TOP15ACC;TOP20ACC;TIME'
 f.write(line + '\n')
 f.close()
+
+# TODO: prendi modello migliore e ritorna tempi di predizione per ogni img in un nuovo file txt
 
 # Define the model
 # n_sift = 25  # explain with velocity
@@ -51,6 +53,7 @@ lbp_values_range = [[8, 1], [16, 2], [24, 3]]
 for n_sift in n_sift_range:
     for color_hist_bins in color_hist_bins_range:
         for lbp_values in lbp_values_range:
+            print('1 of ' + str(len(n_sift_range)*len(color_hist_bins_range)*len(lbp_values_range)) + ' steps')
             handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_values[0], lbp_values[1],
                                                  compute_sift, compute_hog, compute_hist, compute_lbp)
             handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)
