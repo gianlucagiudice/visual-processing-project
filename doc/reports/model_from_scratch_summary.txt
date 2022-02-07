@@ -67,13 +67,15 @@ ________________________________________________________________________________
  batch_normalization_7 (BatchNo  (None, 256)         1024        ['dense_2[0][0]']                
  rmalization)                                                                                     
                                                                                                   
- activation_5 (Activation)      (None, 256)          0           ['batch_normalization_5[0][0]']  
+ activation_features_1 (Activat  (None, 256)         0           ['batch_normalization_5[0][0]']  
+ ion)                                                                                             
                                                                                                   
- activation_7 (Activation)      (None, 256)          0           ['batch_normalization_7[0][0]']  
+ activation_features_2 (Activat  (None, 256)         0           ['batch_normalization_7[0][0]']  
+ ion)                                                                                             
                                                                                                   
- dropout (Dropout)              (None, 256)          0           ['activation_5[0][0]']           
+ dropout (Dropout)              (None, 256)          0           ['activation_features_1[0][0]']  
                                                                                                   
- dropout_2 (Dropout)            (None, 256)          0           ['activation_7[0][0]']           
+ dropout_2 (Dropout)            (None, 256)          0           ['activation_features_2[0][0]']  
                                                                                                   
  dense_1 (Dense)                (None, 128)          32896       ['dropout[0][0]']                
                                                                                                   
@@ -85,13 +87,13 @@ ________________________________________________________________________________
  batch_normalization_8 (BatchNo  (None, 128)         512         ['dense_3[0][0]']                
  rmalization)                                                                                     
                                                                                                   
- activation_6 (Activation)      (None, 128)          0           ['batch_normalization_6[0][0]']  
+ activation_5 (Activation)      (None, 128)          0           ['batch_normalization_6[0][0]']  
                                                                                                   
- activation_8 (Activation)      (None, 128)          0           ['batch_normalization_8[0][0]']  
+ activation_6 (Activation)      (None, 128)          0           ['batch_normalization_8[0][0]']  
                                                                                                   
- dropout_1 (Dropout)            (None, 128)          0           ['activation_6[0][0]']           
+ dropout_1 (Dropout)            (None, 128)          0           ['activation_5[0][0]']           
                                                                                                   
- dropout_3 (Dropout)            (None, 128)          0           ['activation_8[0][0]']           
+ dropout_3 (Dropout)            (None, 128)          0           ['activation_6[0][0]']           
                                                                                                   
  gender_output (Dense)          (None, 1)            129         ['dropout_1[0][0]']              
                                                                                                   
