@@ -47,16 +47,7 @@ class PretrainedVGG(MyModel):
     def __init__(self, last_layer=LAST_LAYER, input_size=IMAGE_INPUT_SIZE):
         super().__init__(input_size)
         # Backbone: VGG16
-        self.model = self.init_model(last_layer)
-        # Reset weights
-        #self.model = self.reset_weights(self.model)
-        # Add output layers
-        self.model = self.add_output_layers(self.model)
-        # Save network architecture
-        self.save_plot_network()
-        # Save summary
-        self.save_summary_output()
-
+        self.model = None
 
     def init_model(self, last_layer):
         base_vgg16_model = tf.keras.applications.VGG16(include_top=True, pooling='avg', weights="imagenet")
@@ -146,9 +137,8 @@ class PretrainedVGG(MyModel):
     def save_weights(self) -> None:
         pass
 
-    def load_weights(self):
-        model_path = '../../model/vggface_model_final.h5'
-        self.model = keras.load_model(model_path)
+    def load_weights(self, path='../model/vggface_model_final.h5'):
+        self.model = keras.models.load_model(path)
 
     '''
     @staticmethod
@@ -168,7 +158,8 @@ class PretrainedVGG(MyModel):
     '''
 
     def predict(self, image: np.array) -> (bool, int):
-        self.model.predict(image)
+        gender, age = self.model.predict(image)
+        return np.expand_dims([gender[0][1]], -1), age
 
     @staticmethod
     def add_output_layers(starting_model: keras.engine.functional.Functional):
@@ -178,8 +169,6 @@ class PretrainedVGG(MyModel):
 
         # Output layer of the model
         final_layer = starting_model.output
-
-
 
 
         # Gender layer
