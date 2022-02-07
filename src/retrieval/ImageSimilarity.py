@@ -18,11 +18,11 @@ class ImageSimilarity:
 
     CELEBRITIES_IMAGES_PATH = join('..', 'dataset', 'Retrieval', 'images')
     CELEBRITIES_METADATA_PATH = join('..', 'dataset', 'Retrieval', 'wiki_final.pickle')
-    FEATTURES_PATH = join('..', 'dataset', 'CELEBS', 'features.pickle')
+    FEATURES_PATH = join('..', 'dataset', 'CELEBS', 'features.pickle')
 
     def __init__(self,
                  images_path=CELEBRITIES_IMAGES_PATH,
-                 features_path=FEATTURES_PATH,
+                 features_path=FEATURES_PATH,
                  metadata_path=CELEBRITIES_METADATA_PATH):
         self.images_path = images_path
         self.metadata: pd.DataFrame = self.read_metadata(metadata_path)
@@ -45,19 +45,22 @@ class ImageSimilarity:
             input_shape = model.get_input_shape()
             img = DataManager.read_image(img_path, input_shape, normalize=True, crop=False)
             img = np.expand_dims(img, 0)
-            # Extract feature
+            # Extract features
             features[celeb_id] = model.extract_features(img)
 
         # Dump features
         with open(self.features_path, 'wb') as f:
             pickle.dump(features, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def find_most_similar(self, image, model, metric_distance=cosine_similarity):
-        my_feature = model.extract_features(np.expand_dims(image, 0))
+    def find_most_similar(self, my_feature, metric_distance=cosine_similarity):
 
         distances = {}
+
         for i, other_feature in self.features.items():
-            d = metric_distance(np.expand_dims(my_feature, 0), np.expand_dims(other_feature, 0))
+            #d = metric_distance(np.expand_dims(my_feature, 0), np.expand_dims(other_feature, 0))
+            d = metric_distance(my_feature,other_feature)
+
+
             distances[i] = d.flatten()[0]
 
         min_id, _ = min(distances.items(), key=lambda x: x[1])

@@ -148,14 +148,16 @@ class PretrainedVGG(MyModel):
         else:
             self.model = model
 
-    def extract_feature(self, img):
+    def extract_features(self, img):
         return self.model.predict(img)
+
+    def get_input_shape(self):
+        return 224, 224
 
 
     def load_feature_extractor(self, path='../model/vggface_model_final.h5'):
 
-
-    '''
+        '''
     @staticmethod
     def reset_weights(model):
         for i, layer in enumerate(model.layers):
