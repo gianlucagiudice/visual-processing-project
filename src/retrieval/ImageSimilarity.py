@@ -18,7 +18,7 @@ class ImageSimilarity:
 
     CELEBRITIES_IMAGES_PATH = join('..', 'dataset', 'Retrieval', 'images')
     CELEBRITIES_METADATA_PATH = join('..', 'dataset', 'Retrieval', 'wiki_final.pickle')
-    FEATURES_PATH = join('..', 'dataset', 'CELEBS', 'features.pickle')
+    FEATURES_PATH = join('..', 'dataset', 'Retrieval', 'features.pickle')
 
     def __init__(self,
                  images_path=CELEBRITIES_IMAGES_PATH,
