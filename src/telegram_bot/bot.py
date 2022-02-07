@@ -31,7 +31,7 @@ class Step(Enum):
 
 
 class TelegramBot:
-    TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
+    TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'#
 
 
     #TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
@@ -75,7 +75,15 @@ class TelegramBot:
         with self.graph.as_default():
             self.session = tf.Session(graph=self.graph)
             with self.session.as_default():
-                self.vggface_model = keras.models.load_model(os.path.abspath(vggface_path))
+                model = keras.models.load_model(os.path.abspath(vggface_path))
+
+                self.vggface_extractor = keras.Model(inputs=model.layers[1].input,
+                                                outputs=model.layers[1].output)
+
+                self.vggface_classif_gender = keras.Model(inputs=model.layers[2].input,
+                                              outputs=model.layers[2].output)
+                self.vggface_classif_age = keras.Model(inputs=model.layers[3].input,
+                                              outputs=model.layers[3].output)
 
     def start_main_loop(self):
         # Start mainloop
@@ -162,10 +170,10 @@ class TelegramBot:
                     cropped_img = img[y_min:y_max, x_min:x_max]
 
                     # Predizioni con la rete
-                    predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
+                    features, predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
 
                     print(f'Genere predetto: {predicted_gender}')
-                    print(f'Età esatta predetta: {predicted_age_min}-{predicted_age_max}')
+                    print(f'Età predetta: {predicted_age_min}-{predicted_age_max}')
 
                     gender_dict = {0: 'Maschio',
                                    1: 'Femmina'}
@@ -216,10 +224,10 @@ class TelegramBot:
                         # Predizioni con la rete
                         #predicted_age, predicted_gender = make_vgg_predictions(gender_vgg_model,age_vgg_model,cropped_img)
 
-                        predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
+                        features, predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
 
                         print(f'Genere predetto: {predicted_gender}')
-                        print(f'Età esatta predetta: {predicted_age_min}-{predicted_age_max}')
+                        print(f'Età predetta: {predicted_age_min}-{predicted_age_max}')
 
 
                         gender_dict = {0: 'Maschio',
@@ -259,10 +267,12 @@ class TelegramBot:
                 img = np.expand_dims(img, 0)
 
                 # Prediction
-                pred = self.vggface_model.predict(img)
+                features = self.vggface_extractor.predict(img)
+                prediction_gender = self.vggface_classif_gender.predict(features)
+                prediction_age = self.vggface_classif_age.predict(features)
 
-                prediction_gender = pred[0]
-                prediction_age = pred[1]
+                #prediction_gender = pred[0]
+                #prediction_age = pred[1]
 
                 prediction_gender = np.argmax(prediction_gender)
                 prediction_age = round(float(prediction_age * SCALER))
@@ -274,7 +284,7 @@ class TelegramBot:
                 #prediction_age = self.age_vgg_model.predict(img)
                 #prediction_age = round(float(prediction_age*SCALER))
 
-        return max(0, prediction_age-5), prediction_age+5, prediction_gender
+        return features, max(0, prediction_age-5), prediction_age+5, prediction_gender
 
     @staticmethod
     def init_bot():
