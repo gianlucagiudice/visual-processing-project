@@ -71,8 +71,6 @@ class TelegramBot:
             with self.session.as_default():
                 model = keras.models.load_model(os.path.abspath(vggface_path))
 
-                self.vggface_input = keras.Model(inputs=model.input,
-                                            outputs=model.layers[0].output)
                 self.vggface_extractor = keras.Model(inputs=model.layers[1].input,
                                                 outputs=model.layers[1].output)
 
