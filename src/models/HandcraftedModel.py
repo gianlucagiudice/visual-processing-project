@@ -19,11 +19,12 @@ from tqdm import tqdm
 
 from src.EnhancementUtils import EnhancementUtils
 from src.config import CHECKPOINT_DIR, LOG_DIR
-from src.models.Model import IMAGE_INPUT_SIZE
 from src.models.Model import Model as MyModel
 
 
 class HandcraftedModel(MyModel):
+    IMAGE_INPUT_SIZE = (124, 124, 3)
+
     checkpoint_dir = join(CHECKPOINT_DIR, 'handcrafted')
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
     log_dir = join(LOG_DIR, 'fit', 'handcrafted/') + datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -120,15 +121,6 @@ class HandcraftedModel(MyModel):
             pickle_kmeans = pickle.load(file)
 
         return pickle_clf, pickle_regressor, pickle_kmeans
-
-    def compute_top_k_accuracy(self, k, age, age_preds):
-        top_k_acc = 0
-
-        for i in range(len(age)):
-            if abs(age[i] - age_preds[i]) < k:
-                top_k_acc += 1
-
-        return top_k_acc / len(age)
 
     def evaluate(self, df):
         f = open('evaluation_handcrafted.txt', 'a')

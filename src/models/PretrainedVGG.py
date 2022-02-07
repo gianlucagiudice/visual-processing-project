@@ -4,7 +4,6 @@ import keras.engine.functional
 import numpy as np
 
 from src.models.Model import Model as MyModel
-from src.models.Model import IMAGE_INPUT_SIZE
 
 import tensorflow as tf
 from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR
@@ -39,6 +38,8 @@ def print_tensorboard_command():
 
 
 class PretrainedVGG(MyModel):
+    IMAGE_INPUT_SIZE = (224, 224, 3)
+    
     checkpoint_dir = join(CHECKPOINT_DIR, 'pretrained_vgg')
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
     log_dir = join(LOG_DIR, 'fit', 'pretrained_vgg/') + datetime.now().strftime("%Y%m%d-%H%M%S")

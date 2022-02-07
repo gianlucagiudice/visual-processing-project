@@ -2,11 +2,8 @@ import numpy as np
 from abc import ABC, abstractmethod
 
 
-IMAGE_INPUT_SIZE = (224, 224, 3)
-
-
 class Model(ABC):
-    def __init__(self, input_size: np.array=IMAGE_INPUT_SIZE):
+    def __init__(self, input_size: np.array):
         # Model weights
         self.model = None
 
@@ -27,3 +24,13 @@ class Model(ABC):
     def load_weights(self):
         # Load the weights of the model
         pass
+
+    @staticmethod
+    def compute_top_k_accuracy(k, age, age_preds):
+        top_k_acc = 0
+
+        for i in range(len(age)):
+            if abs(age[i] - age_preds[i]) <= k:
+                top_k_acc += 1
+
+        return top_k_acc / len(age)

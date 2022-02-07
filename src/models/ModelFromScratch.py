@@ -16,7 +16,6 @@ from keras.models import Model
 import keras_tuner as kt
 
 from src.config import OUTPUT_IMAGE_FOLDER, OUTPUT_REPORT_FOLDER, CHECKPOINT_DIR, LOG_DIR, SAVE_MODEL_DIR
-from src.models.Model import IMAGE_INPUT_SIZE
 from src.models.Model import Model as MyModel
 
 LR = 0.001
@@ -43,6 +42,8 @@ def init_temp_dirs():
 
 
 class ModelFromScratch(MyModel):
+    IMAGE_INPUT_SIZE = (124, 124, 3)
+    
     checkpoint_dir = join(CHECKPOINT_DIR, 'from_scratch')
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.h5')
     log_dir = join(LOG_DIR, 'fit', 'from_scratch/')
