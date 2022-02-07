@@ -63,5 +63,5 @@ class ImageSimilarity:
 
             distances[i] = d.flatten()[0]
 
-        min_id, _ = min(distances.items(), key=lambda x: x[1])
-        return min_id, self.metadata.loc[min_id]
+        min_id, dist = max(distances.items(), key=lambda x: x[1])
+        return min_id, self.metadata.loc[min_id], dist
