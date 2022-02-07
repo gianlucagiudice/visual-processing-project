@@ -1,6 +1,7 @@
 import os.path
 from enum import Enum
 from os import path
+from os.path import join
 
 import numpy as np
 import pandas as pd
@@ -13,12 +14,13 @@ from urllib.request import urlopen
 import keras
 import tensorflow.compat.v1 as tf
 
-from src.DataManager import DataManager
 from src.EnhancementUtils import EnhancementUtils
 from src.config import IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME, WIKI_PATH, WIKI_FAMOUS_ACTORS_FILENAME
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
-from src.models.Model import IMAGE_INPUT_SIZE
+#from src.models.Model import IMAGE_INPUT_SIZE
+
+from src.DataManager import DataManager
 from src.retrieval.ImageSimilarity import ImageSimilarity
 
 METADATA_IMDB_FILE = '../../dataset/imdb_crop/imdb_most_famous_actors.pickle'
@@ -50,6 +52,12 @@ class TelegramBot:
         self.init_cascade_face_detector() # <---------- CASCADE DETECTOR INIZIALIZZAZIONE
         # Init VGG model
         self.init_VGG_model()
+        # Init similarity
+        self.sim = ImageSimilarity(images_path= join('..','..', 'dataset', 'Retrieval', 'images'),
+                                   features_path= join('..','..', 'dataset', 'CELEBS', 'features.pickle'),
+                                   metadata_path= join('..','..', 'dataset', 'Retrieval', 'wiki_final.pickle')
+                                   )
+        self.sim.load_features()
 
     def init_keras_session(self):
         self.graph = tf.compat.v1.get_default_graph()
@@ -184,13 +192,13 @@ class TelegramBot:
                                              predicted_gender] + '\nEtà predetta: [' + str(
                                              predicted_age_min) + ';' + str(predicted_age_max) + ']')
 
-                    # TODO : perform retrieval of most similar celebrity
-                    # celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
-                    #                                                           predicted_age)
+                    #Perform retrieval of most similar celebrity
+                    celeb_name, celeb_image_path, celeb_dist = self.retrieve_similar_celeb(features, predicted_gender,
+                                                                               predicted_age_min+5)
 
-
-                    #self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
-                    #                   caption='Caspita! Assomigli proprio a ' + celeb_name)
+                    self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                                       caption='Caspita! Assomigli proprio a ' + celeb_name + '\nSomiglianza: ' +
+                                               str(round(celeb_dist, 2)))
 
 
                     self.step = Step.RECEIVE_IMAGE
@@ -238,13 +246,13 @@ class TelegramBot:
                                         'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: [' + str(
                                             predicted_age_min) + ';' + str(predicted_age_max) + ']')
 
-                        # TODO : perform retrieval of most similar celebrity
-                        celeb_name, celeb_image_path = self.retrieve_similar_celeb(features, predicted_gender,
+                        # Perform retrieval of most similar celebrity
+                        celeb_name, celeb_image_path, celeb_dist = self.retrieve_similar_celeb(features, predicted_gender,
                                                                                    predicted_age_min+5)
 
-
-                        #self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
-                        #              caption='Caspita! Assomigli proprio a ' + celeb_name)
+                        self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                                           caption='Caspita! Assomigli proprio a ' + celeb_name + '\nSomiglianza: ' +
+                                                   str(round(celeb_dist, 2)))
 
                         self.step = Step.RECEIVE_IMAGE
                         print(f'Step: {self.step}')
@@ -302,20 +310,20 @@ class TelegramBot:
     def retrieve_similar_celeb(self, features, predicted_gender, predicted_age):
         predicted_gender = int(not predicted_gender)  # on IMDB gender are switched
 
+        most_similar_id, most_similar_actor, dist = self.sim.find_most_similar(features)
+
+        return most_similar_actor.loc['name'], join('../', most_similar_actor.loc['path']), dist
 
 
-
-
-
-        data = pd.read_pickle(METADATA_WIKI_FILE)
-
-        filtered_data_gender = data.query('gender == @predicted_gender')
-        filtered_data = filtered_data_gender.query('@predicted_age - 5 <= age <= @predicted_age + 5')
-        if filtered_data.empty:
-            filtered_data = filtered_data_gender.query('@predicted_age - 10 <= age <= @predicted_age + 10')
-
+        # data = pd.read_pickle(METADATA_WIKI_FILE)
+        #
+        # filtered_data_gender = data.query('gender == @predicted_gender')
+        # filtered_data = filtered_data_gender.query('@predicted_age - 5 <= age <= @predicted_age + 5')
+        # if filtered_data.empty:
+        #     filtered_data = filtered_data_gender.query('@predicted_age - 10 <= age <= @predicted_age + 10')
+        #
         # TODO: for now it returns the first actor with similar age and gender, but from now we have to use the similarity on the face!
-        return filtered_data.iloc[0]["name"], filtered_data.iloc[0]["url_img"]
+        # return filtered_data.iloc[0]["name"], filtered_data.iloc[0]["url_img"]
 
 # Loading detector
 #cascade_face_detector = CascadeFaceDetector()

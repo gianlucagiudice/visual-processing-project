@@ -31,3 +31,5 @@ most_similar_id, most_similar_name, dist = sim.find_most_similar(features)
 elapsed = time.time() - starttime
 print(f'{most_similar_id} - {most_similar_name} - {dist}')
 print(f'Elapsed time: {elapsed}')
+
+print(f'{most_similar_name.loc["path"]}')
