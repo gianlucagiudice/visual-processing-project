@@ -3,7 +3,7 @@ from src.DataManager import DataManager
 from src.models.HandcraftedModel import HandcraftedModel
 from src.models.Model import IMAGE_INPUT_SIZE
 
-N_SAMPLE = 0.1
+N_SAMPLE = 1
 
 # Read the data
 data_manager = DataManager(UTK_PATH, UTK_METADATA_FILENAME, IMAGE_INPUT_SIZE,
@@ -23,7 +23,7 @@ X_test, y_test = data_manager.get_X(test), data_manager.get_y(test)
 
 f = open('evaluation_handcrafted.txt', 'a')
 line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST;COMPUTELBP;' + \
-       'ACCCLF;MSEREG;RMSEREG;MAEREG;TOP5ACC;TOP10ACC;TOP15ACC;TOP20ACC;TIME'
+       'ACCCLF;RECCLF;FSCORECLF;MSEREG;RMSEREG;MAEREG;TOP5ACC;TOP10ACC;TOP15ACC;TOP20ACC;TIME'
 f.write(line + '\n')
 f.close()
 

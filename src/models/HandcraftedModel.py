@@ -11,7 +11,7 @@ import seaborn as sns
 from skimage import feature, color
 from skimage.feature import hog
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, recall_score, f1_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeRegressor
@@ -139,8 +139,12 @@ class HandcraftedModel(MyModel):
         print('Evaluation of gender classification')
         preds = self.clf.predict(df.drop(columns=["age", "gender"], axis=1))
         acc = accuracy_score(df["gender"], preds)
+        recall = recall_score(df["gender"], preds)
+        f1score = f1_score(df["gender"], preds)
         conf_mat = confusion_matrix(df["gender"], preds)
         print('Accuracy: ' + str(acc))
+        print('Recall: ' + str(recall))
+        print('F1 score: ' + str(f1score))
         #sns.heatmap(conf_mat, linewidth=0.5)
         #plt.show()
 
@@ -201,8 +205,8 @@ class HandcraftedModel(MyModel):
         #sns.heatmap(conf_mat_classes, linewidth=0.5)
         #plt.show()
 
-        line = line + str(acc) + ';' + str(mse) + ';' + str(rmse) + ';' + str(mae) + ';' + str(top5) + ';' + str(top10)\
-               + ';' + str(top15) + ';' + str(top20)
+        line = line + str(acc) + ';' + str(recall) + ';' + str(f1score) + ';' + str(mse) + ';' + str(rmse) + ';' + \
+               str(mae) + ';' + str(top5) + ';' + str(top10) + ';' + str(top15) + ';' + str(top20)
 
         finish_time = datetime.now()
         delta_time = finish_time - self.time
