@@ -19,6 +19,7 @@ from src.config import IMDB_CROPPED_PATH, IMDB_FAMOUS_ACTORS_FILENAME, WIKI_PATH
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
 from src.models.Model import IMAGE_INPUT_SIZE
+from src.retrieval.ImageSimilarity import ImageSimilarity
 
 METADATA_IMDB_FILE = '../../dataset/imdb_crop/imdb_most_famous_actors.pickle'
 METADATA_WIKI_FILE = '../../dataset/imdb_crop/wiki_most_famous_actors.pickle'
@@ -238,8 +239,8 @@ class TelegramBot:
                                             predicted_age_min) + ';' + str(predicted_age_max) + ']')
 
                         # TODO : perform retrieval of most similar celebrity
-                        #celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
-                        #                                                           predicted_age)
+                        celeb_name, celeb_image_path = self.retrieve_similar_celeb(features, predicted_gender,
+                                                                                   predicted_age_min+5)
 
 
                         #self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
@@ -298,8 +299,13 @@ class TelegramBot:
                 img = Image.fromarray(img_rescaled)
                 return self.yolo_face_detector.detect_image(img, return_confidence=False, th=0.5)
 
-    def retrieve_similar_celeb(self, img_cropped, predicted_gender, predicted_age):
+    def retrieve_similar_celeb(self, features, predicted_gender, predicted_age):
         predicted_gender = int(not predicted_gender)  # on IMDB gender are switched
+
+
+
+
+
 
         data = pd.read_pickle(METADATA_WIKI_FILE)
 
