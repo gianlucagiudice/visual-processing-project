@@ -71,13 +71,11 @@ class TelegramBot:
 
 
     def init_VGG_model(self,
-                       vgg_gender_path='../../model/finetuned_vgg_gender_best.h5',
-                       vgg_age_path='../../model/finetuned_vgg_age_best.h5'):
+                       vggface_path='../../model/vggface_model_final.h5'):
         with self.graph.as_default():
             self.session = tf.Session(graph=self.graph)
             with self.session.as_default():
-                self.gender_vgg_model = keras.models.load_model(os.path.abspath(vgg_gender_path))
-                self.age_vgg_model = keras.models.load_model(os.path.abspath(vgg_age_path))
+                self.vggface_model = keras.models.load_model(os.path.abspath(vggface_path))
 
     def start_main_loop(self):
         # Start mainloop
@@ -164,24 +162,26 @@ class TelegramBot:
                     cropped_img = img[y_min:y_max, x_min:x_max]
 
                     # Predizioni con la rete
-                    predicted_age, predicted_gender = self.make_vgg_predictions(cropped_img)
+                    predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
 
                     print(f'Genere predetto: {predicted_gender}')
-                    print(f'Età esatta predetta: {predicted_age}')
+                    print(f'Età esatta predetta: {predicted_age_min}-{predicted_age_max}')
 
                     gender_dict = {0: 'Maschio',
                                    1: 'Femmina'}
 
                     self.bot.sendMessage(chat_id,
-                                         f'Genere predetto: {gender_dict[predicted_gender]}\n'
-                                         f'Età predetta: [{predicted_age - 5}; + {predicted_age + 5}]')
+                                         'Genere predetto: ' + gender_dict[
+                                             predicted_gender] + '\nEtà predetta: [' + str(
+                                             predicted_age_min) + ';' + str(predicted_age_max) + ']')
 
                     # TODO : perform retrieval of most similar celebrity
-                    celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
-                                                                               predicted_age)
+                    # celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
+                    #                                                           predicted_age)
 
-                    self.bot.sendPhoto(chat_id, celeb_image_path,
-                                       caption='Caspita! Assomigli proprio a ' + celeb_name)
+
+                    #self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                    #                   caption='Caspita! Assomigli proprio a ' + celeb_name)
 
 
                     self.step = Step.RECEIVE_IMAGE
@@ -216,10 +216,10 @@ class TelegramBot:
                         # Predizioni con la rete
                         #predicted_age, predicted_gender = make_vgg_predictions(gender_vgg_model,age_vgg_model,cropped_img)
 
-                        predicted_age, predicted_gender = self.make_vgg_predictions(cropped_img)
+                        predicted_age_min, predicted_age_max, predicted_gender = self.make_vgg_predictions(cropped_img)
 
                         print(f'Genere predetto: {predicted_gender}')
-                        print(f'Età esatta predetta: {predicted_age}')
+                        print(f'Età esatta predetta: {predicted_age_min}-{predicted_age_max}')
 
 
                         gender_dict = {0: 'Maschio',
@@ -227,14 +227,15 @@ class TelegramBot:
 
                         self.bot.sendMessage(chat_id,
                                         'Genere predetto: ' + gender_dict[predicted_gender] + '\nEtà predetta: [' + str(
-                                            predicted_age-5) + ';' + str(predicted_age+5) + ']')
+                                            predicted_age_min) + ';' + str(predicted_age_max) + ']')
 
                         # TODO : perform retrieval of most similar celebrity
-                        celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
-                                                                                   predicted_age)
+                        #celeb_name, celeb_image_path = self.retrieve_similar_celeb(cropped_img, predicted_gender,
+                        #                                                           predicted_age)
 
-                        self.bot.sendPhoto(chat_id, photo=celeb_image_path,
-                                      caption='Caspita! Assomigli proprio a ' + celeb_name)
+
+                        #self.bot.sendPhoto(chat_id, photo=open(celeb_image_path, 'rb'),
+                        #              caption='Caspita! Assomigli proprio a ' + celeb_name)
 
                         self.step = Step.RECEIVE_IMAGE
                         print(f'Step: {self.step}')
@@ -256,14 +257,24 @@ class TelegramBot:
         with self.graph.as_default():
             with self.session.as_default():
                 img = np.expand_dims(img, 0)
-                # Gender
-                prediction_gender = self.gender_vgg_model.predict(img)
-                prediction_gender = np.argmax(prediction_gender)
-                # Age
-                prediction_age = self.age_vgg_model.predict(img)
-                prediction_age = round(float(prediction_age*SCALER))
 
-        return prediction_age, prediction_gender
+                # Prediction
+                pred = self.vggface_model.predict(img)
+
+                prediction_gender = pred[0]
+                prediction_age = pred[1]
+
+                prediction_gender = np.argmax(prediction_gender)
+                prediction_age = round(float(prediction_age * SCALER))
+
+                # Gender
+                #prediction_gender = self.gender_vgg_model.predict(img)
+                #prediction_gender = np.argmax(prediction_gender)
+                # Age
+                #prediction_age = self.age_vgg_model.predict(img)
+                #prediction_age = round(float(prediction_age*SCALER))
+
+        return max(0, prediction_age-5), prediction_age+5, prediction_gender
 
     @staticmethod
     def init_bot():
