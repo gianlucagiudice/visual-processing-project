@@ -23,7 +23,7 @@ from src.models.Model import Model as MyModel
 
 
 class HandcraftedModel(MyModel):
-    IMAGE_INPUT_SIZE = (124, 124, 3)
+    IMAGE_INPUT_SIZE = (224, 224, 3)
 
     checkpoint_dir = join(CHECKPOINT_DIR, 'handcrafted')
     checkpoint_filepath = join(checkpoint_dir, 'ckpt-{epoch:03d}.hdf5')
@@ -31,10 +31,10 @@ class HandcraftedModel(MyModel):
 
     def __init__(self,
                  data_manager,
-                 n_sift=25,
-                 color_hist_bins=128,
-                 lbp_n_points=24,
-                 lbp_radius=3,
+                 n_sift=10,
+                 color_hist_bins=32,
+                 lbp_n_points=8,
+                 lbp_radius=1,
                  compute_sift=True,
                  compute_hog=True,
                  compute_hist=True,
@@ -59,6 +59,10 @@ class HandcraftedModel(MyModel):
         self.kmeans = None
 
     def predict(self, image: np.array) -> (bool, int):
+        # to standardize process with networks
+        if len(image.shape) == 4:
+            image = np.squeeze(image)
+
         clf, regressor, kmeans = self.load_weights()
         features = self.extract_features(image, self.compute_sift, self.compute_hog, self.compute_hist,
                                          self.compute_lbp, kmeans, kmeans.n_clusters)
