@@ -107,26 +107,30 @@ class HandcraftedModel(MyModel):
         self.save_weights()
 
     def save_weights(self) -> None:
-        pkl_filename_clf = "handcrafted_clf.pkl"
+        details = str(self.n_sift) + "_" + str(self.color_hist_bins) + "_" + str(self.lbp_n_points) + "_" + \
+                  str(self.lbp_radius)
+        pkl_filename_clf = "handcrafted_clf" + details + ".pkl"
         with open(pkl_filename_clf, 'wb') as file:
             pickle.dump(self.clf, file)
 
-        pkl_filename_reg = "handcrafted_regressor.pkl"
+        pkl_filename_reg = "handcrafted_regressor" + details + ".pkl"
         with open(pkl_filename_reg, 'wb') as file:
             pickle.dump(self.regressor, file)
 
-        pkl_filename_kmeans = "handcrafted_kmeans.pkl"
+        pkl_filename_kmeans = "handcrafted_kmeans" + details + ".pkl"
         with open(pkl_filename_kmeans, 'wb') as file:
             pickle.dump(self.kmeans, file)
 
     def load_weights(self):
-        pkl_filename_clf = "../model/handcrafted_clf.pkl"
+        details = str(self.n_sift) + "_" + str(self.color_hist_bins) + "_" + str(self.lbp_n_points) + "_" + \
+                  str(self.lbp_radius)
+        pkl_filename_clf = "../model/handcrafted_clf" + details + ".pkl"
         with open(pkl_filename_clf, 'rb') as file:
             pickle_clf = pickle.load(file)
-        pkl_filename_reg = "../model/handcrafted_regressor.pkl"
+        pkl_filename_reg = "../model/handcrafted_regressor" + details + ".pkl"
         with open(pkl_filename_reg, 'rb') as file:
             pickle_regressor = pickle.load(file)
-        pkl_filename_kmeans = "../model/handcrafted_kmeans.pkl"
+        pkl_filename_kmeans = "../model/handcrafted_kmeans" + details + ".pkl"
         with open(pkl_filename_kmeans, 'rb') as file:
             pickle_kmeans = pickle.load(file)
 
