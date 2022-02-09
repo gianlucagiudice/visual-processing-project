@@ -16,20 +16,41 @@ sim.load_features()
 
 #img_path = '../dataset/FDDB/originalPics/2002/07/19/big/img_391.jpg'
 
-img_path = '../dataset/Retrieval/Foto_Prove/Bruce_Willis.jpg'
+img_path = '../dataset/Retrieval/prova/freeman.jpeg'
 
 img = DataManager.read_image(img_path, model.get_input_shape(), normalize=True, crop=False)
 
 img = np.expand_dims(img, 0)
 
-features = model.extract_features(img)
-print(features.shape)
+features = model.predict(img)
 
 starttime = time.time()
-most_similar_id, most_similar_name, dist = sim.find_most_similar(features)
-
+most_similar_id, most_similar_name, dist = sim.find_most_similar(
+    features,
+    gender=0,
+    age=50 + 5,
+    weight_features=3,
+    weight_age=1,
+    optimize=False
+)
 elapsed = time.time() - starttime
-print(f'{most_similar_id} - {most_similar_name} - {dist}')
 print(f'Elapsed time: {elapsed}')
+
+starttime = time.time()
+most_similar_id_2, most_similar_name_2, dist_2 = sim.find_most_similar(
+    features,
+    gender=0,
+    age=50 + 5,
+    weight_features=3,
+    weight_age=1,
+    optimize=True
+)
+elapsed = time.time() - starttime
+print(f'Elapsed time: {elapsed}')
+
+assert most_similar_id == most_similar_id_2
+print(dist, dist_2)
+
+print(f'{most_similar_id} - {most_similar_name} - {dist}')
 
 print(f'{most_similar_name.loc["path"]}')
