@@ -206,8 +206,9 @@ class DataManager:
         return dataset
 
     def inverse_standardize_age(self, ages):
-        if len(ages.shape) == 1:
-            ages = np.expand_dims(ages, -1)
+        if not isinstance(ages, list):
+            if len(ages.shape) == 1:
+                ages = np.expand_dims(ages, -1)
         return self.scaler.inverse_transform(ages)
 
     def delete_nan_columns(self, df_train, df_val, df_test):

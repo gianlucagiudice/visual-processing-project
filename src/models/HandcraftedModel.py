@@ -103,12 +103,12 @@ class HandcraftedModel(MyModel):
         self.regressor = DecisionTreeRegressor(random_state=0)
         self.regressor.fit(df_train.drop(columns=["age", "gender"], axis=1), df_train["age"])
 
+        # save the model
+        self.save_weights()
+
         # evaluate the model
         print('Evaluating the models ...')
         self.evaluate(df_val)
-
-        # save the model
-        self.save_weights()
 
     def save_weights(self) -> None:
         details = str(self.n_sift) + "_" + str(self.color_hist_bins) + "_" + str(self.lbp_n_points) + "_" + \

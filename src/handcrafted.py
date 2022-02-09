@@ -27,34 +27,6 @@ line = 'HC;NSIFT;HISTBINS;LBPPOINTS;LBPRADIUS;COMPUTESIFT;COMPUTEHOG;COMPUTEHIST
 f.write(line + '\n')
 f.close()
 
-# TODO: prendi modello migliore e ritorna tempi di predizione per ogni img in un nuovo file txt
-
-# Define the model
-# n_sift = 25  # explain with velocity
-# color_hist_bins = 128
-# lbp_n_points = 24  # little increase of performance with these values
-# lbp_radius = 3
-compute_sift = True
-compute_hog = True
-compute_hist = True
-compute_lbp = True
-# handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_n_points, lbp_radius, compute_sift,
-#                                      compute_hog, compute_hist, compute_lbp)
-# Train model
-# handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)
-
-# number of best sift descriptors
-n_sift_range = [10, 25, 50]
-# bins of the color histogram
-color_hist_bins_range = [32, 64, 128]
-# values for lbp
-lbp_values_range = [[8, 1], [16, 2], [24, 3]]
-
-for n_sift in n_sift_range:
-    for color_hist_bins in color_hist_bins_range:
-        for lbp_values in lbp_values_range:
-            print('1 of ' + str(len(n_sift_range)*len(color_hist_bins_range)*len(lbp_values_range)) + ' steps')
-            handcrafted_model = HandcraftedModel(data_manager, n_sift, color_hist_bins, lbp_values[0], lbp_values[1],
-                                                 compute_sift, compute_hog, compute_hist, compute_lbp)
-            handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)
-
+print('only sift')
+handcrafted_model = HandcraftedModel(data_manager, 10, compute_sift=1, compute_hist=0, compute_hog=0, compute_lbp=0)
+handcrafted_model.train(X_train, y_train, X_test, y_test, X_val, y_val)
