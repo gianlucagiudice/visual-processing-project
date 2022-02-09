@@ -34,10 +34,10 @@ class Step(Enum):
 
 
 class TelegramBot:
-    TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'#
+    #TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'#
 
 
-    #TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
+    TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
 
     def __init__(self):
         # Bot
@@ -58,6 +58,17 @@ class TelegramBot:
                                    metadata_path= join('..','..', 'dataset', 'Retrieval', 'wiki_final.pickle')
                                    )
         self.sim.load_features()
+
+        # # TODO: Istanziare due sim invece che uno, uno con features_male.pickle e uno con features_female.pickle
+        # self.sim_male = ImageSimilarity(images_path= join('..','..', 'dataset', 'Retrieval', 'images'),
+        #                                    features_path= join('..','..', 'dataset', 'CELEBS', 'features_male.pickle'),
+        #                                    metadata_path= join('..','..', 'dataset', 'Retrieval', 'wiki_final.pickle')
+        #                                    )
+        # self.sim_female = ImageSimilarity(images_path= join('..','..', 'dataset', 'Retrieval', 'images'),
+        #                                    features_path= join('..','..', 'dataset', 'CELEBS', 'features_female.pickle'),
+        #                                    metadata_path= join('..','..', 'dataset', 'Retrieval', 'wiki_final.pickle')
+        #
+
 
     def init_keras_session(self):
         self.graph = tf.compat.v1.get_default_graph()
@@ -308,22 +319,15 @@ class TelegramBot:
                 return self.yolo_face_detector.detect_image(img, return_confidence=False, th=0.5)
 
     def retrieve_similar_celeb(self, features, predicted_gender, predicted_age):
-        predicted_gender = int(not predicted_gender)  # on IMDB gender are switched
 
-        most_similar_id, most_similar_actor, dist = self.sim.find_most_similar(features)
+        _, most_similar_actor, dist = self.sim.find_most_similar(features)
+
+        # if predicted_gender == 0:
+        #     _, most_similar_actor, dist = self.sim_male.find_most_similar(features)
+        # else:
+        #     _, most_similar_actor, dist = self.sim_female.find_most_similar(features)
 
         return most_similar_actor.loc['name'], join('../', most_similar_actor.loc['path']), dist
-
-
-        # data = pd.read_pickle(METADATA_WIKI_FILE)
-        #
-        # filtered_data_gender = data.query('gender == @predicted_gender')
-        # filtered_data = filtered_data_gender.query('@predicted_age - 5 <= age <= @predicted_age + 5')
-        # if filtered_data.empty:
-        #     filtered_data = filtered_data_gender.query('@predicted_age - 10 <= age <= @predicted_age + 10')
-        #
-        # TODO: for now it returns the first actor with similar age and gender, but from now we have to use the similarity on the face!
-        # return filtered_data.iloc[0]["name"], filtered_data.iloc[0]["url_img"]
 
 # Loading detector
 #cascade_face_detector = CascadeFaceDetector()
