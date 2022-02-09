@@ -34,7 +34,8 @@ LOG_DIR = join('..', 'temp', 'log')
 # Save model dir
 SAVE_MODEL_DIR = join('..', 'model')
 
-
+# Telegram Token
+TELEGRAM_BOT_TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'
 
 # Random seed
 SEED = 830694

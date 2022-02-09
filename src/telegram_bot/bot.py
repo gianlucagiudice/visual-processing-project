@@ -10,6 +10,8 @@ import telepot
 import tensorflow.compat.v1 as tf
 from PIL import Image
 
+from src.config import TELEGRAM_BOT_TOKEN
+
 from src.EnhancementUtils import EnhancementUtils
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
@@ -27,10 +29,15 @@ class Step(Enum):
     MULTI_FACE_DETECTED = 2
 
 
-class TelegramBot:
-    # TOKEN = '5085307623:AAEojC_68VWSig4C2Jw5LhC1xuzX76Xtagc'#
+class Detector(Enum):
+    YOLO = 0
+    CASCADE = 1
 
-    TOKEN = '5029509042:AAE0ji8V8uHWIF_RT5a_qWGqf0qk3uTKrcc'
+
+class TelegramBot:
+    TOKEN = TELEGRAM_BOT_TOKEN
+
+    DETECTOR = Detector.YOLO
 
     def __init__(self):
         # Bot
@@ -39,10 +46,12 @@ class TelegramBot:
         self.faces = []
         # Init Keras sessions
         self.init_keras_session()
-        # Init yolo face detector
-        # self.init_yolo_face_detector() # <---------- YOLO DETECTOR INIZIALIZZAZIONE
-        # Init cascade face detector
-        self.init_cascade_face_detector()  # <---------- CASCADE DETECTOR INIZIALIZZAZIONE
+        if TelegramBot.DETECTOR == Detector.YOLO:
+            # Init yolo face detector
+            self.init_yolo_face_detector() # <---------- YOLO DETECTOR INIZIALIZZAZIONE
+        elif TelegramBot.DETECTOR == Detector.CASCADE:
+            # Init cascade face detector
+            self.init_cascade_face_detector()  # <---------- CASCADE DETECTOR INIZIALIZZAZIONE
         # Init VGG model
         self.init_VGG_model()
         # Init similarity
@@ -121,9 +130,10 @@ class TelegramBot:
 
                 self.bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
-                # self.faces = self.detect_faces_yolo(img_rescaled)# <---------- YOLO DETECTOR DETECTION
-                self.faces = self.cascade_face_detector.detect_image(
-                    img_rescaled)  # <---------- CASCADE DETECTOR DETECTION
+                if TelegramBot.DETECTOR == Detector.YOLO:
+                    self.faces = self.detect_faces_yolo(img_rescaled)
+                elif TelegramBot.DETECTOR == Detector.CASCADE:
+                    self.faces = self.cascade_face_detector.detect_image(img_rescaled)
                 print(self.faces)
 
                 num_faces_found = len(self.faces)
@@ -137,7 +147,7 @@ class TelegramBot:
                         (w_space, h_space), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
                         cv2.rectangle(img_rescaled, (x_min, y_min - 20), (x_min + w_space, y_min), (0, 0, 255), -1)
                         cv2.putText(img_rescaled, label, (x_min, y_min - 5),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                                    cv2.FONT_HERSHEY_SIMPLEX, 8, (255, 255, 255), 1)
 
                     detected_imagepath = 'detected_image.png'
                     cv2.imwrite(detected_imagepath, img_rescaled)
