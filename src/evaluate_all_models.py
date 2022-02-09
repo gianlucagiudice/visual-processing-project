@@ -78,20 +78,21 @@ df = pd.DataFrame(columns=['model', 'mae', 'acc', 'top5', 'top10', 'top15', 'top
 print('---------- Evaluate model from scratch ----------')
 res = evaluate_model(ModelFromScratch.IMAGE_INPUT_SIZE, ModelFromScratch)
 res['model'] = 'from_scratch'
-df.append(res, ignore_index=True)
+df = df.append(res, ignore_index=True)
 print('\n')
 
 # ---------- MODEL VGG  ----------
 print('---------- Evaluate VGG model ----------')
 res = evaluate_model(PretrainedVGG.IMAGE_INPUT_SIZE, PretrainedVGG)
 res['model'] = 'vgg'
-df.append(res, ignore_index=True)
+df = df.append(res, ignore_index=True)
 print('\n')
 
 # ---------- MODEL HANDCRAFTED ----------
 print('---------- Evaluate handcrafted ----------')
-res = evaluate_model(HandcraftedModel.IMAGE_INPUT_SIZE, HandcraftedModel)
+#res = evaluate_model(HandcraftedModel.IMAGE_INPUT_SIZE, HandcraftedModel)
 res['model'] = 'handcrafted'
-df.append(res, ignore_index=True)
+df = df.append(res, ignore_index=True)
 print('\n')
 
+df.to_pickle('../doc/reports/evaluation_models.pickle')
