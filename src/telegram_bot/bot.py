@@ -53,9 +53,9 @@ class TelegramBot:
         # Init VGG model
         self.init_VGG_model()
         # Init similarity
-        self.sim = ImageSimilarity(images_path= join('..','..', 'dataset', 'Retrieval', 'images'),
-                                   features_path= join('..','..', 'dataset', 'CELEBS', 'features.pickle'),
-                                   metadata_path= join('..','..', 'dataset', 'Retrieval', 'wiki_final.pickle')
+        self.sim = ImageSimilarity(images_path=join('..', '..', 'dataset', 'Retrieval', 'images'),
+                                   features_path=join('..', '..', 'dataset', 'Retrieval', 'features.pickle'),
+                                   metadata_path=join('..', '..', 'dataset', 'Retrieval', 'wiki_final.pickle')
                                    )
         self.sim.load_features()
 
@@ -316,7 +316,13 @@ class TelegramBot:
 
     def retrieve_similar_celeb(self, features, predicted_gender, predicted_age):
 
-        _, most_similar_actor, dist = self.sim.find_most_similar(features)
+        _, most_similar_actor, dist = self.sim.find_most_similar(
+            features,
+            gender=predicted_gender,
+            age=predicted_age,
+            weight_features=3,
+            weight_age=1
+        )
 
         # if predicted_gender == 0:
         #     _, most_similar_actor, dist = self.sim_male.find_most_similar(features)
