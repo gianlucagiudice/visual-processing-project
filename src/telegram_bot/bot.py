@@ -125,24 +125,20 @@ class TelegramBot:
                 self.bot.download_file(msg['photo'][-1]['file_id'], 'received_image.png')
                 img = cv2.imread('received_image.png')
 
+                # scale_factor = 512/max(img.shape)
+                # dim = (round(img.shape[1]*scale_factor), round(img.shape[0]*scale_factor))
 
-                #scale_factor = 512/max(img.shape)
-                #dim = (round(img.shape[1]*scale_factor), round(img.shape[0]*scale_factor))
-
-                #img_rescaled = cv2.resize(img, dim)
+                # img_rescaled = cv2.resize(img, dim)
                 img_rescaled = img
 
-                '''
+                # enhancement
                 utils = EnhancementUtils()
-                if utils.is_image_too_dark(img):
-                    img_rescaled = utils.equalize_histogram(np.uint8(img_rescaled * 255))
-                    img_rescaled = utils.automatic_gamma(img_rescaled)
-                    img_rescaled = utils.adaptive_gamma(img_rescaled)
-                '''
+                img_rescaled = utils.adaptive_gamma(img_rescaled)
+                img_rescaled = utils.bilateral_filter(img_rescaled)
 
                 self.bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
-                #self.faces = self.detect_faces_yolo(img_rescaled)# <---------- YOLO DETECTOR DETECTION
+                # self.faces = self.detect_faces_yolo(img_rescaled)# <---------- YOLO DETECTOR DETECTION
                 self.faces = self.cascade_face_detector.detect_image(img_rescaled) # <---------- CASCADE DETECTOR DETECTION
                 print(self.faces)
 

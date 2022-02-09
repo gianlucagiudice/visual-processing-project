@@ -1,12 +1,8 @@
-import math
-
 import cv2
 import numpy as np
 
 
 class EnhancementUtils:
-
-    # TODO: estimate of the blur
 
     def __init__(self):
         pass
@@ -18,28 +14,19 @@ class EnhancementUtils:
 
         return equalized_img
 
-    def bilateral_filter(self, img, d=15, sigmaColor=25, sigmaSpace=25):
+    def bilateral_filter(self, img, d=3, sigmaColor=25, sigmaSpace=25):
         bilateral = cv2.bilateralFilter(img, d=d, sigmaColor=sigmaColor, sigmaSpace=sigmaSpace)
         return bilateral
 
-    def is_image_too_dark(self, img, thresh=0.5):
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        _, _, v = cv2.split(hsv)
-
-        return int(np.average(v.flatten())) / 255 < thresh
-
-    def automatic_gamma(self, img):
-        # convert img to gray
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        mid = 0.5
-        mean = np.mean(gray)
-        gamma = math.log(mid * 255) / math.log(mean)  # --> it's a simple proportion!
-        # do gamma correction
-        return np.power(img, gamma).clip(0, 255).astype(np.uint8)
-
     def adaptive_gamma(self, img):
         y, cr, cb = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb))
-        y = (255 * (y / 255) ** (2 ** ((128 - 128) / 128))).astype('uint8')
-        img_restored = cv2.merge([y, cr, cb])
-        img_restored = cv2.cvtColor(img_restored, cv2.COLOR_YCrCb2BGR)
-        return img_restored
+        y_inv = 255 - y
+        bilateral = cv2.bilateralFilter(y_inv, d=2, sigmaColor=25, sigmaSpace=25)
+        enhanced = np.empty((len(y), len(y[0])))
+        for i in range(len(y)):
+            for j in range(len(y[0])):
+                enhanced[i][j] = (255 * (y[i][j] / 255) ** (2 ** (0.5 * (128 - bilateral[i][j]) / 128)))
+        enhanced = enhanced.astype('uint8')
+        img_enhanced = cv2.merge([enhanced, cr, cb])
+
+        return cv2.cvtColor(img_enhanced, cv2.COLOR_YCrCb2BGR)
