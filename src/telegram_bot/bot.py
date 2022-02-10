@@ -11,13 +11,12 @@ import telepot
 import tensorflow.compat.v1 as tf
 from PIL import Image
 
-from src.config import TELEGRAM_BOT_TOKEN
-
 from src.EnhancementUtils import EnhancementUtils
+from src.config import TELEGRAM_BOT_TOKEN
 from src.detection.cascade.CascadeFaceDetector import CascadeFaceDetector
 from src.detection.yolo.YoloFaceDetector import YoloFaceDetector
-from src.retrieval.ImageSimilarity import ImageSimilarity
 from src.evaluate_yolo_detector import bb_intersection_over_union
+from src.retrieval.ImageSimilarity import ImageSimilarity
 
 # from src.models.Model import IMAGE_INPUT_SIZE
 
@@ -143,7 +142,6 @@ class TelegramBot:
 
                     self.bot.sendPhoto(chat_id, photo=open(detected_imagepath, 'rb'))
 
-
                 self.bot.sendMessage(chat_id, 'Sto analizzando la foto...')
 
                 if self.debug:
@@ -160,10 +158,12 @@ class TelegramBot:
                     self.bot.sendMessage(chat_id, 'Combined')
                     self.send_detected_faces(img_rescaled, detected_combined, chat_id)
 
-                if TelegramBot.DETECTOR == Detector.YOLO:
-                    self.faces = self.detect_faces_yolo(img_rescaled)
-                elif TelegramBot.DETECTOR == Detector.CASCADE:
-                    self.faces = self.cascade_face_detector.detect_image(img_rescaled)
+                detected_yolo = self.detect_faces_yolo(img_rescaled)
+                detected_cascade = self.cascade_face_detector.detect_image(img_rescaled)
+                detected_combined = self.combine_face_detectors(detected_yolo, detected_cascade)
+
+                self.faces = detected_combined
+
                 print(self.faces)
 
                 num_faces_found = len(self.faces)
@@ -373,12 +373,12 @@ class TelegramBot:
                           if bb_intersection_over_union(face_cascade, face_yolo) > thd]
             if not candidates:
                 combined_faces.append(face_yolo)
-            elif len(candidates) == 1:
-                combined_faces.append(candidates[0])
             else:
+                candidates.append(face_yolo)
                 boxes_area = [((box[2] - box[0] + 1) * (box[3] - box[1] + 1), box) for box in candidates]
                 combined_faces.append(sorted(boxes_area, key=lambda x: x[0], reverse=True)[0][1])
         return combined_faces
+
 
 bot = TelegramBot()
 bot.start_main_loop()
