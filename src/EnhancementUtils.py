@@ -22,11 +22,12 @@ class EnhancementUtils:
         y, cr, cb = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb))
         y_inv = 255 - y
         bilateral = cv2.bilateralFilter(y_inv, d=2, sigmaColor=25, sigmaSpace=25)
-        enhanced = np.empty((len(y), len(y[0])))
-        for i in range(len(y)):
-            for j in range(len(y[0])):
-                enhanced[i][j] = (255 * (y[i][j] / 255) ** (2 ** (0.5 * (128 - bilateral[i][j]) / 128)))
+        y = y.astype(np.int16) # otherwise np does subtraction in modulo 256
+        bilateral = bilateral.astype(np.int16)
+        enhanced = 255 * ((y / 255) ** (2 ** (0.5 * (128 - bilateral) / 128)))
         enhanced = enhanced.astype('uint8')
         img_enhanced = cv2.merge([enhanced, cr, cb])
 
         return cv2.cvtColor(img_enhanced, cv2.COLOR_YCrCb2BGR)
+
+    # TODO: overexposed
