@@ -26,7 +26,7 @@ def bb_intersection_over_union(boxA, boxB):
     # compute the intersection over union by taking the intersection
     # area and dividing it by the sum of prediction + ground-truth
     # areas - the interesection area
-    iou = interArea / float(boxAArea + boxBArea - interArea)
+    iou = interArea / (float(boxAArea + boxBArea - interArea) + 1e-10)
     # return the intersection over union value
     return iou
 
@@ -92,6 +92,6 @@ def evaluate_model(yolo, df):
 
 
 if __name__ == '__main__':
-    yolo_face_detector = YoloFaceDetector()
+    yolo_face_detector = YoloFaceDetector(model_path=os.path.join('..', 'model', 'yolo_finetuned_best.h5'))
     df = pd.read_pickle('../dataset/FDDB/fddb_metadata.pickle')
     evaluate_model(yolo_face_detector, df)
