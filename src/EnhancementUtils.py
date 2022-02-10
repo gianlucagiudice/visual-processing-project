@@ -22,9 +22,9 @@ class EnhancementUtils:
         y, cr, cb = cv2.split(cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb))
         y_inv = 255 - y
         bilateral = cv2.bilateralFilter(y_inv, d=2, sigmaColor=25, sigmaSpace=25)
-        y = y.astype(np.int16) # otherwise np does subtraction in modulo 256
-        bilateral = bilateral.astype(np.int16)
-        enhanced = 255 * ((y / 255) ** (2 ** (0.5 * (128 - bilateral) / 128)))
+        y = np.array(y).astype(np.int16)  # otherwise np does subtraction in modulo 256
+        bilateral = np.array(bilateral).astype(np.int16)
+        enhanced = 255 * ((y / 255) ** (np.power(2, (0.5 * (128 - bilateral) / 128))))
         enhanced = enhanced.astype('uint8')
         img_enhanced = cv2.merge([enhanced, cr, cb])
 
