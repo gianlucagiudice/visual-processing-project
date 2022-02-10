@@ -31,14 +31,14 @@ class HandcraftedModel(MyModel):
 
     def __init__(self,
                  data_manager,
-                 n_sift=10,
-                 color_hist_bins=32,
-                 lbp_n_points=8,
-                 lbp_radius=1,
-                 compute_sift=True,
+                 n_sift=0,
+                 color_hist_bins=0,
+                 lbp_n_points=0,
+                 lbp_radius=0,
+                 compute_sift=False,
                  compute_hog=True,
-                 compute_hist=True,
-                 compute_lbp=True,
+                 compute_hist=False,
+                 compute_lbp=False,
                  input_size=IMAGE_INPUT_SIZE
                  ):
         super().__init__(input_size)
@@ -65,7 +65,7 @@ class HandcraftedModel(MyModel):
 
         clf, regressor, kmeans = self.load_weights()
         features = self.extract_features(image, self.compute_sift, self.compute_hog, self.compute_hist,
-                                         self.compute_lbp, kmeans, kmeans.n_clusters)
+                                         self.compute_lbp, kmeans, kmeans.n_clusters if kmeans else None)
         gender_pred = clf.predict(features)
         age_pred = regressor.predict(features)
 
@@ -277,7 +277,6 @@ class HandcraftedModel(MyModel):
             for h in histo:
                 df['sift_' + str(i)] = h
                 i = i + 1
-
 
         if compute_hog:
             # HOG - on the entire face

@@ -14,7 +14,7 @@ from src.DataManager import DataManager
 from config import FULL_UTK_CROPPED_PATH, FULL_UTK_CROPPED_METADATA_FILENAME
 
 
-N_SAMPLE = 10
+N_SAMPLE = 1000
 
 TEST_SIZE_FACTOR = 0.2
 N_SAMPLE = N_SAMPLE / TEST_SIZE_FACTOR
@@ -90,7 +90,7 @@ print('\n')
 
 # ---------- MODEL HANDCRAFTED ----------
 print('---------- Evaluate handcrafted ----------')
-#res = evaluate_model(HandcraftedModel.IMAGE_INPUT_SIZE, HandcraftedModel)
+res = evaluate_model(HandcraftedModel.IMAGE_INPUT_SIZE, HandcraftedModel)
 res['model'] = 'handcrafted'
 df = df.append(res, ignore_index=True)
 print('\n')
