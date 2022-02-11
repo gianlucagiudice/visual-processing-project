@@ -340,7 +340,7 @@ class TelegramBot:
             features,
             gender=predicted_gender,
             age=predicted_age,
-            weight_features=3,
+            weight_features=7,
             weight_age=1
         )
         print(most_similar_actor)

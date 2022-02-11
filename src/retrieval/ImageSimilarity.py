@@ -146,8 +146,8 @@ class ImageSimilarity:
             similarities[i] = metric_distance(my_feature, other_feature).flatten()
 
         if age:
-            age_distances = np.absolute(age - ages) / self.max_age * weight_age
-            final_similarities = weight_features * similarities - weight_features * age_distances
+            age_distances = np.absolute(age - ages)
+            final_similarities = weight_features * similarities - weight_age * age_distances
         else:
             final_similarities = similarities
 
@@ -168,8 +168,8 @@ class ImageSimilarity:
         similarities = np.dot(my_feature, features_matrix).flatten()
 
         if age:
-            age_distances = np.absolute(age - ages) / self.max_age * weight_age
-            final_similarities = weight_features * similarities - weight_features * age_distances
+            age_distances = np.absolute(age - ages) / self.max_age
+            final_similarities = weight_features * similarities - weight_age * age_distances
         else:
             final_similarities = similarities
 
