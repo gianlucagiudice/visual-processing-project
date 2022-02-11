@@ -269,9 +269,9 @@ class TelegramBot:
                                        1: 'Femmina'}
 
                         self.bot.sendMessage(chat_id,
-                                             'Genere predetto: ' + gender_dict[
-                                                 predicted_gender] + '\nEtà predetta: [' + str(
-                                                 predicted_age_min) + ';' + str(predicted_age_max) + ']')
+                                            'Genere predetto: ' + gender_dict[predicted_gender] + '\n' +
+                                            'Età predetta: [' + str(predicted_age_min) + ';' + str(predicted_age_max) + ']'
+                                            + '\nRaw: ' + str(predicted_age_min + 5))
 
                         # Perform retrieval of most similar celebrity
                         celeb_name, celeb_image_path, celeb_dist = self.retrieve_similar_celeb(features,
