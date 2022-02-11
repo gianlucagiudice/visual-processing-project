@@ -18,9 +18,9 @@ A detailed explanation of the entire project is available <a href='https://drive
   - `metadata_conversion_matlab2pandas.ipynb`: Convert metadata from matlab format to pandas format.
   - `Gender_Age_Prediction_Using_VGGFace.ipynb`: Performs the actual training of the finetuned VGG-Face model
 
-- `dataset` : Containing all the datasets used for training the models. The datasets are currently not inside the folder because of Github storage limitations. You can find them in the following links:
+- `dataset` : Containing all the datasets used for training the models. Some of the datasets are currently not inside the folder because of Github storage limitations. You can find them in the following links:
   - <a href='http://vis-www.cs.umass.edu/fddb/'>FDDB</a> 
-  - <a href='https://susanqq.github.io/UTKFace/'>UTKFaces</a> 
+  - <a href='https://susanqq.github.io/UTKFace/'>UTKFaces</a> (already inside the folder)
   - <a href='http://www.vision.caltech.edu/Image_Datasets/Caltech256/'>Caltech256</a> 
   - The dataset used for similar actor retrieval was scraped by us and can be found entirely in the `dataset/Retrieval` folder
 
