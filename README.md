@@ -5,7 +5,7 @@
 
 GABAR (Gender & Age Based Actor Retrieval) is a computer vision project realized on the occasion of the final exam of the Visual Information Processing and Management course held at the University of Milano-Bicocca.
 Given an image with one or more faces, we aim to detect them and estimate their gender and age. With these information we will propose an actor that resembles the selected person in the image. We have made a telegram bot as an interface to allow user interaction.
-A detailed explanation of the entire project is available <a href='https://drive.google.com/file/d/1_nAELZex7rRXohmTF3I7mttFcYidHANV/view?usp=sharing'>here</a>
+A detailed explanation of the entire project is available at `visual-processing-project/GABAR.pdf` or <a href='https://drive.google.com/file/d/1_nAELZex7rRXohmTF3I7mttFcYidHANV/view?usp=sharing'>here</a>
 
 ## Project structure
 - `model/`: Containing all the models used by the telegram bot. The pretrained models can be downloaded <a href='https://drive.google.com/drive/folders/1WWQ28Kq_KDDU7QVQblZXd4_FCDLofMRs?usp=sharing'>here</a>
