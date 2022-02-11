@@ -147,7 +147,7 @@ class ImageSimilarity:
 
         if age:
             age_distances = np.absolute(age - ages) / self.max_age * weight_age
-            final_similarities = weight_features * similarities + weight_features * age_distances
+            final_similarities = weight_features * similarities - weight_features * age_distances
         else:
             final_similarities = similarities
 
