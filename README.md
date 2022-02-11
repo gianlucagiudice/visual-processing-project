@@ -15,5 +15,5 @@
 # How to use:
 - Generate a new telegram bot using BotFather
 - Insert the bot token inside 'src/config.py' in the variable TELEGRAM_BOT_TOKEN
-- Download from <a href='https://drive.google.com/drive/folders/1WWQ28Kq_KDDU7QVQblZXd4_FCDLofMRs?usp=sharing'>here</a> the 'model' folder and add it inside 'visual-processing-project/'
+- Download from <a href='https://drive.google.com/drive/folders/19HhDo2A6lWS1jTW4HlZMC3NFG6i2duyS?usp=sharing'>here</a> the 'model' folder and add it inside 'visual-processing-project/'
 - Run 'src/telegram_bot/bot.py'
