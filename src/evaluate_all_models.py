@@ -14,10 +14,7 @@ from src.DataManager import DataManager
 from config import FULL_UTK_CROPPED_PATH, FULL_UTK_CROPPED_METADATA_FILENAME
 
 
-N_SAMPLE = 1000
-
 TEST_SIZE_FACTOR = 0.2
-N_SAMPLE = N_SAMPLE / TEST_SIZE_FACTOR
 
 
 def evaluate_model(input_size, target_model):
@@ -26,7 +23,7 @@ def evaluate_model(input_size, target_model):
                                FULL_UTK_CROPPED_METADATA_FILENAME,
                                input_size,
                                test_size=TEST_SIZE_FACTOR, validation_size=0.15,
-                               n_subset=N_SAMPLE, normalize_images=True, normalize_age=True)
+                               n_subset=1, normalize_images=True, normalize_age=True)
     data = data_manager.get_dataset()
     # Split into train, validation, test
     train, validation, test = data_manager.split_dataset(data)
