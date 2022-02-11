@@ -78,8 +78,9 @@ class TelegramBot:
                                                            anchors_path=anchors_path)
 
     def init_cascade_face_detector(self,
-                                   model_path='../detection/cascade/model/faceDetector_FDDB_LBP_10_0.01.xml'):
+                                   model_path='../../model/cascade_facedetector_best.xml'):
         self.cascade_face_detector = CascadeFaceDetector(model_path=model_path)
+
 
     def init_VGG_model(self,
                        vggface_path='../../model/vggface_model_final.h5'):
